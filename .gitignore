@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+*.code-workspace
+
+# Logs / env
+*.log
+.env
+.env.*
+!.env.example
+
+# Build / cache
+dist/
+build/
+.cache/
+*.crx
+*.pem
+*.zip
+
+# Test artifacts
+tests/snapshots/
+coverage/
+
+# Cursor / local
+.cursor/
+*.canvas.tsx

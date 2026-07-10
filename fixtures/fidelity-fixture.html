@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Send2Figma fidelity fixture</title>
+  <style>
+    @font-face {
+      font-family: "FixtureDisplay";
+      src: local("Georgia"), local("Times New Roman");
+      font-weight: 700;
+      font-style: normal;
+    }
+    :root {
+      --brand: #0f766e;
+      --ink: #134e4a;
+      --surface: #f0fdfa;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, #ecfeff, #f0fdfa 40%, #fff);
+      min-height: 100vh;
+      padding: 32px;
+    }
+    h1 {
+      font-family: FixtureDisplay, Georgia, serif;
+      font-size: 32px;
+      margin: 0 0 8px;
+    }
+    .card {
+      position: relative;
+      max-width: 420px;
+      padding: 20px 20px 20px 28px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(15, 118, 110, 0.15);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 6px;
+      border-radius: 0 6px 6px 0;
+      background: var(--brand);
+    }
+    .card::after {
+      content: "NEW";
+      position: absolute;
+      top: -8px;
+      right: 16px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #fff;
+      background: var(--brand);
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 16px;
+    }
+    .icon {
+      width: 40px;
+      height: 40px;
+    }
+    details {
+      margin-top: 16px;
+    }
+    details[open] summary {
+      color: var(--brand);
+    }
+    .menu {
+      position: relative;
+      display: inline-block;
+      margin-top: 16px;
+    }
+    .menu button {
+      background: var(--brand);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    .menu button::after {
+      content: " ▾";
+    }
+    .menu-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid #99f6e4;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      padding: 6px;
+      z-index: 20;
+    }
+    .menu.open .menu-panel {
+      display: block;
+      animation: drop 180ms ease-out;
+    }
+    @keyframes drop {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .menu-panel div {
+      padding: 8px 10px;
+      border-radius: 6px;
+    }
+    .menu-panel div:hover {
+      background: var(--surface);
+    }
+    select {
+      margin-top: 16px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #99f6e4;
+    }
+    .hidden-noise {
+      display: none;
+    }
+    .btn.primary {
+      background: var(--brand);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .hard-blur {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid #99f6e4;
+    }
+    .hero-img {
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      object-position: left center;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="fixture-root">
+    <h1>Fidelity fixture</h1>
+    <p>Pseudos, gradient bg, SVG, dropdown, select, object-fit.</p>
+    <div class="row">
+      <svg class="icon" viewBox="0 0 40 40" aria-hidden="true">
+        <defs>
+          <symbol id="star" viewBox="0 0 24 24">
+            <path fill="#0f766e" d="M12 2l2.9 6.9L22 10l-5 4.9L18.2 22 12 18.2 5.8 22 7 14.9 2 10l7.1-1.1L12 2z"/>
+          </symbol>
+        </defs>
+        <use href="#star" x="8" y="8" width="24" height="24"></use>
+      </svg>
+      <img
+        class="hero-img"
+        alt="sample"
+        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect fill='%2399f6e4' width='240' height='160'/%3E%3Ccircle cx='80' cy='80' r='40' fill='%230f766e'/%3E%3C/svg%3E"
+      />
+    </div>
+    <div class="menu" id="dropdown">
+      <button type="button" id="dropdownBtn" aria-expanded="false">Account</button>
+      <div class="menu-panel" role="menu">
+        <div role="menuitem">Profile</div>
+        <div role="menuitem">Billing</div>
+        <div role="menuitem">Sign out</div>
+      </div>
+    </div>
+    <select id="nativeSelect">
+      <option>Design</option>
+      <option selected>Prototype</option>
+      <option>Dev Mode</option>
+    </select>
+    <details>
+      <summary>More details</summary>
+      <p>Expanded content for open-state capture.</p>
+    </details>
+    <div class="hidden-noise">Should be culled</div>
+    <div class="row">
+      <button type="button" class="btn primary">Save</button>
+      <button type="button" class="btn primary">Share</button>
+      <button type="button" class="btn primary">Export</button>
+    </div>
+    <div class="hard-blur">Backdrop blur region (raster fallback target)</div>
+  </div>
+  <script>
+    const menu = document.getElementById("dropdown");
+    const btn = document.getElementById("dropdownBtn");
+    btn.addEventListener("click", () => {
+      const open = menu.classList.toggle("open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  </script>
+</body>
+</html>

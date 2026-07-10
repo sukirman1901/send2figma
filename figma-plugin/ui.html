@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --back-a: #000000;
+        --back-b: #0a0a0a;
+        --back-c: #111111;
+        --back-d: #1a1a1a;
+        --text-a: #ffffff;
+        --text-b: #b0b0b0;
+        --text-c: #6b6b6b;
+        --bor-a: #1f1f1f;
+        --bor-b: #2a2a2a;
+        --lime-a: #cdfe67;
+        --lime-b: #89fe65;
+        --danger: #ff6b6b;
+        --ok: #89fe65;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--back-a);
+        color: var(--text-a);
+        font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+
+      .shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 14px;
+        gap: 10px;
+        background: #000000f2;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--back-c);
+        border: 1px solid var(--bor-a);
+        display: grid;
+        place-items: center;
+        color: var(--lime-b);
+        flex-shrink: 0;
+      }
+
+      .brand-mark svg,
+      .brand-mark .reicon {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+
+      .brand-name {
+        font: 700 13px/1.2 system-ui, sans-serif;
+        letter-spacing: -0.01em;
+      }
+
+      .brand-sub {
+        font-size: 11px;
+        color: var(--text-c);
+        margin-top: 2px;
+      }
+
+      .lead {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-b);
+      }
+
+      .lead strong {
+        color: var(--lime-b);
+        font-weight: 600;
+      }
+
+      textarea {
+        flex: 1;
+        width: 100%;
+        min-height: 160px;
+        padding: 10px;
+        border: 1px solid var(--bor-b);
+        border-radius: 12px;
+        background: var(--back-c);
+        color: var(--text-a);
+        font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        resize: none;
+        outline: none;
+        transition: border-color 0.15s var(--ease);
+      }
+
+      textarea::placeholder {
+        color: var(--text-c);
+      }
+
+      textarea:focus {
+        border-color: #89fe6540;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        flex: 1;
+        height: 40px;
+        border: 0;
+        border-radius: 10px;
+        font: 700 13px system-ui, sans-serif;
+        cursor: pointer;
+        transition: filter 0.15s ease, background 0.15s ease;
+      }
+
+      #apply {
+        background: var(--lime-b);
+        color: #0a0a0a;
+      }
+
+      #apply:hover {
+        filter: brightness(1.05);
+      }
+
+      #close {
+        background: #89fe6514;
+        border: 1px solid #89fe6540;
+        color: var(--lime-b);
+        font-weight: 600;
+      }
+
+      #close:hover {
+        background: #89fe6526;
+      }
+
+      #status {
+        min-height: 16px;
+        font-size: 11px;
+        color: var(--text-c);
+      }
+
+      #status.ok {
+        color: var(--ok);
+      }
+
+      #status.err {
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" class="reicon" style="color: currentColor"><g transform="scale(1.33333)"><path d="M2.665,5.086L8.534,1.995c.292-.154,.64-.154,.932,0l5.87,3.091c.534,.281,.534,1.046,0,1.327l-5.87,3.091c-.292,.154-.64,.154-.932,0L2.665,6.414c-.534-.281-.534-1.046,0-1.327Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><path d="M15.736,9c0,.261-.134,.523-.401,.664l-5.87,3.091c-.292,.154-.64,.154-.932,0l-5.87-3.091c-.267-.141-.401-.402-.401-.664" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><path d="M15.736,12.25c0,.261-.134,.523-.401,.664l-5.87,3.091c-.292,.154-.64,.154-.932,0l-5.87-3.091c-.267-.141-.401-.402-.401-.664" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></g></svg>
+        </div>
+        <div>
+          <div class="brand-name">Design system</div>
+          <div class="brand-sub">Apply tokens to this file</div>
+        </div>
+      </div>
+      <p class="lead">
+        <strong>1.</strong> Chrome extension → Design system → Extract from page → <strong>Export .json</strong><br />
+        <strong>2.</strong> Open that file, copy all, paste here → Apply to file.<br />
+        Do not paste <strong>.md</strong> — only JSON with tokens.colors / components.
+      </p>
+      <textarea
+        id="json"
+        placeholder='{"version":1,"tokens":{"colors":[{"token":"color/brand","value":"rgb(15, 118, 110)"}]},"components":[]}'
+      ></textarea>
+      <div class="row">
+        <button type="button" id="apply">Apply to file</button>
+        <button type="button" id="close">Close</button>
+      </div>
+      <div id="status"></div>
+    </div>
+    <script>
+      const status = document.getElementById("status");
+      document.getElementById("apply").onclick = () => {
+        status.className = "";
+        status.textContent = "Applying…";
+        parent.postMessage(
+          { pluginMessage: { type: "APPLY_JSON", json: document.getElementById("json").value } },
+          "*"
+        );
+      };
+      document.getElementById("close").onclick = () => {
+        parent.postMessage({ pluginMessage: { type: "CLOSE" } }, "*");
+      };
+      onmessage = (e) => {
+        const msg = e.data.pluginMessage;
+        if (!msg) return;
+        if (msg.type === "DONE") {
+          status.className = "ok";
+          status.textContent = `Done — colors ${msg.stats.colors}, sizes ${msg.stats.floats}, renames ${msg.stats.renamed}, fills ${msg.stats.bound}${
+            msg.stats.skippedColors ? `, skipped ${msg.stats.skippedColors}` : ""
+          }`;
+        }
+        if (msg.type === "ERROR") {
+          status.className = "err";
+          status.textContent = msg.error;
+        }
+      };
+    </script>
+  </body>
+</html>

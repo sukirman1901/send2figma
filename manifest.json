@@ -1,0 +1,70 @@
+{
+  "update_url": "https://clients2.google.com/service/update2/crx",
+  "manifest_version": 3,
+  "name": "Send2Figma",
+  "short_name": "Send2Figma",
+  "version": "1.21",
+  "description": "Capture a webpage or element and paste it into Figma as editable layers — not a screenshot.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "debugger",
+    "storage",
+    "clipboardWrite",
+    "offscreen",
+    "identity",
+    "unlimitedStorage"
+  ],
+  "action": {
+    "default_title": "Send2Figma",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "capture-desktop": {
+      "description": "Capture desktop view",
+      "suggested_key": {
+        "default": "Shift+Alt+D"
+      }
+    },
+    "capture-mobile": {
+      "description": "Capture mobile view",
+      "suggested_key": {
+        "default": "Shift+Alt+M"
+      }
+    },
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+H",
+        "mac": "Ctrl+Shift+H"
+      }
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentscript.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "resources": ["ui/*", "fonts/*", "icons/*"]
+    }
+  ]
+}
