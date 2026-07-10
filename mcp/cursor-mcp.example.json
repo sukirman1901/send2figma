@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "send2figma-web-clone": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/htmltofigma/mcp/dist/index.js"],
+      "env": {
+        "S2F_MCP_TOKEN": "replace-with-token-from-extension-options",
+        "S2F_MCP_PORT": "17321"
+      }
+    }
+  }
+}

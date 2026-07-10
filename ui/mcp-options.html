@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Send2Figma — MCP</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #12141a;
+        --card: #1a1d27;
+        --text: #f2f4f8;
+        --muted: #9aa3b5;
+        --lime: #89fe65;
+        --bor: #2a3142;
+      }
+      body {
+        margin: 0;
+        font: 14px/1.45 Epilogue, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 24px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--bor);
+        border-radius: 12px;
+        padding: 16px;
+        max-width: 560px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 12px 0 6px;
+      }
+      input[type="text"],
+      input[type="number"],
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 8px;
+        border: 1px solid var(--bor);
+        background: #0e1016;
+        color: var(--text);
+        padding: 10px 12px;
+        font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font: 600 12px Epilogue, sans-serif;
+        cursor: pointer;
+        background: linear-gradient(to right, #b6ff8a, var(--lime));
+        color: #111;
+      }
+      button.secondary {
+        background: #2a3142;
+        color: var(--text);
+      }
+      .status {
+        font-size: 12px;
+        margin-top: 14px;
+      }
+      .status strong {
+        color: var(--lime);
+      }
+      .status[data-state="disconnected"] strong {
+        color: #ff8a65;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Web Clone MCP</h1>
+    <p>
+      Connect Cursor to this extension over localhost. Screenshots are pixel-accurate; generated code is
+      high-fidelity recreate context — not a guaranteed 100% compiler.
+    </p>
+    <div class="card">
+      <label>
+        <input type="checkbox" id="enabled" checked />
+        Enable MCP bridge
+      </label>
+      <label for="port">Port</label>
+      <input id="port" type="number" min="1024" max="65535" value="17321" />
+      <label for="token">Token</label>
+      <input id="token" type="text" spellcheck="false" />
+      <div class="row">
+        <button type="button" id="generate" class="secondary">Generate token</button>
+        <button type="button" id="save">Save</button>
+        <button type="button" id="copy" class="secondary">Copy Cursor config</button>
+      </div>
+      <div class="status" id="status" data-state="disconnected">Status: <strong>disconnected</strong></div>
+      <label for="config">Cursor MCP config</label>
+      <textarea id="config" readonly></textarea>
+      <p class="hint">
+        Run <code>cd mcp && npm install && npm run build</code>, point Cursor at
+        <code>mcp/dist/index.js</code>, set the same token in env <code>S2F_MCP_TOKEN</code>, then call
+        <code>ping</code>.
+      </p>
+    </div>
+    <script src="mcp-options.js"></script>
+  </body>
+</html>

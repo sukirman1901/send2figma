@@ -25,6 +25,7 @@
         ${dockItem("custom", "edit", "Custom width")}
         ${dockItem("select", "select", "Select element")}
         ${dockItem("design", "layers", "Design system")}
+        ${dockItem("screenshot", "camera", "Take screenshot")}
       </div>
       <div class="htfy-dock-sep"></div>
       <div class="htfy-dock-system">
@@ -140,6 +141,16 @@
         </div>
       </div>
 
+      <div id="toolScreenshot" class="tool-view" data-tool="screenshot">
+        <p class="tool-lead">Save a PNG of the page — like DevTools Capture screenshot.</p>
+        <div class="shot-actions">
+          <button type="button" class="design-extract-btn" data-shot="visible">Visible area</button>
+          <button type="button" class="primary-outline" data-shot="fullPage">Full page</button>
+          <button type="button" class="primary-outline" data-shot="custom">Custom region</button>
+        </div>
+        <p class="design-meta" style="margin-top:10px">Downloads to your computer. Dock hides while capturing.</p>
+      </div>
+
       <div id="multiGate" class="multi-gate hidden">
         <p>Copied <strong id="multiGateLabel"></strong> — paste into Figma now, then continue for the next size.</p>
         <button id="multiGateContinue" type="button">Continue</button>
@@ -162,7 +173,25 @@
         <span class="switch"><input type="checkbox" id="previewToggle" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
         <span class="multi-toggle-label">Preview before copy</span>
       </label>
-      <p id="fidelityTip" class="fidelity-tip">Editable = more editable layers. Exact = raster filters/shadows for closer visual match.</p>
+      <div class="fidelity-help" id="fidelityHelp">
+        <p id="fidelityTip" class="fidelity-tip">Editable keeps more layers editable in Figma. Exact matches the look more closely.</p>
+        <button type="button" class="fidelity-why-btn" id="fidelityWhyBtn" aria-expanded="false">Why Exact?</button>
+        <ul id="fidelityWhyList" class="fidelity-why-list hidden">
+          <li><strong>Editable</strong> — text, shapes, and fills stay as layers you can tweak.</li>
+          <li><strong>Exact</strong> — filters, complex shadows, blend modes, canvas, video, and iframes may become <em>images</em> so the paste looks closer to the page.</li>
+          <li>After capture you’ll see an <strong>% editable</strong> badge and can highlight rasterized regions on the page.</li>
+        </ul>
+      </div>
+
+      <div id="fidelityReport" class="fidelity-report hidden" aria-live="polite">
+        <div class="fidelity-report-top">
+          <span id="fidelityReportLabel" class="fidelity-badge">—</span>
+          <span id="fidelityReportMode" class="fidelity-mode-pill">editable</span>
+        </div>
+        <div class="fidelity-meter" aria-hidden="true"><div id="fidelityMeterFill" class="fidelity-meter-fill" style="width:100%"></div></div>
+        <p id="fidelityReportDetail" class="fidelity-report-detail"></p>
+        <button type="button" id="highlightRastersBtn" class="fidelity-highlight-btn hidden">Highlight rasters on page</button>
+      </div>
 
       <div id="previewPanel" class="preview-panel">
         <h3 id="previewTitle">Capture ready</h3>
@@ -232,6 +261,7 @@
     let freeLimit = 10;
     let busy = false;
     let lastDesignSystem = null;
+    let lastFidelityReport = null;
     let mode = "preset";
     let billingErrTimer = null;
 
@@ -357,13 +387,109 @@
       }, delay);
     }
 
+    function clearRasterHighlights() {
+      document.getElementById("__htfyRasterHighlight")?.remove();
+    }
+
+    function highlightRastersOnPage(regions) {
+      clearRasterHighlights();
+      const list = (regions || []).filter(
+        (r) => Number.isFinite(r.docX) && Number.isFinite(r.docY) && r.width > 1 && r.height > 1
+      );
+      if (!list.length) {
+        showBillingError("No raster regions to highlight on this capture.");
+        return;
+      }
+      const root = document.createElement("div");
+      root.id = "__htfyRasterHighlight";
+      root.setAttribute("data-htfy-chrome", "1");
+      root.style.cssText =
+        "position:absolute;left:0;top:0;width:0;height:0;z-index:2147483646;pointer-events:none;";
+      for (const r of list) {
+        const box = document.createElement("div");
+        box.style.cssText = [
+          "position:absolute",
+          `left:${Math.round(r.docX)}px`,
+          `top:${Math.round(r.docY)}px`,
+          `width:${Math.round(r.width)}px`,
+          `height:${Math.round(r.height)}px`,
+          "box-sizing:border-box",
+          "border:2px solid #ff5c5c",
+          "background:rgba(255,92,92,0.12)",
+          "border-radius:4px",
+          "pointer-events:none",
+        ].join(";");
+        const tag = document.createElement("span");
+        tag.textContent = r.kind || "raster";
+        tag.style.cssText =
+          "position:absolute;left:0;top:-18px;padding:1px 6px;border-radius:4px;background:#ff5c5c;color:#fff;font:600 10px/16px Epilogue,sans-serif;white-space:nowrap;";
+        box.appendChild(tag);
+        root.appendChild(box);
+      }
+      const dismiss = document.createElement("button");
+      dismiss.type = "button";
+      dismiss.textContent = "Clear highlights";
+      dismiss.setAttribute("data-htfy-chrome", "1");
+      dismiss.style.cssText =
+        "position:fixed;right:16px;bottom:16px;z-index:2147483647;pointer-events:auto;height:36px;padding:0 14px;border:0;border-radius:8px;background:#111;color:#fff;font:600 12px Epilogue,sans-serif;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);";
+      dismiss.addEventListener("click", () => clearRasterHighlights());
+      root.appendChild(dismiss);
+      document.documentElement.appendChild(root);
+      const first = list[0];
+      window.scrollTo({
+        top: Math.max(0, first.docY - 48),
+        left: Math.max(0, first.docX - 24),
+        behavior: "smooth",
+      });
+    }
+
+    function showFidelityReport(report) {
+      const card = $("#fidelityReport");
+      if (!card) return;
+      lastFidelityReport = report || null;
+      if (!report) {
+        card.classList.add("hidden");
+        clearRasterHighlights();
+        return;
+      }
+      card.classList.remove("hidden");
+      const label = $("#fidelityReportLabel");
+      const modePill = $("#fidelityReportMode");
+      const detail = $("#fidelityReportDetail");
+      const fill = $("#fidelityMeterFill");
+      const highlightBtn = $("#highlightRastersBtn");
+      if (label) label.textContent = report.label || "—";
+      if (modePill) {
+        modePill.textContent = report.qualityMode === "exact" ? "Exact" : "Editable";
+        modePill.dataset.mode = report.qualityMode || "editable";
+      }
+      if (detail) detail.textContent = report.detail || report.modeHint || "";
+      if (fill) {
+        const pct = Math.max(0, Math.min(100, Number(report.editablePct) || 0));
+        fill.style.width = `${pct}%`;
+        fill.dataset.level = pct >= 90 ? "high" : pct >= 70 ? "mid" : "low";
+      }
+      if (highlightBtn) {
+        const canHighlight = Array.isArray(report.regions) && report.regions.some((r) => Number.isFinite(r.docX));
+        highlightBtn.classList.toggle("hidden", !canHighlight);
+        highlightBtn.textContent =
+          report.rasters > 0
+            ? `Highlight ${report.rasters} raster${report.rasters === 1 ? "" : "s"} on page`
+            : "Highlight rasters on page";
+      }
+    }
+
     function showPreview(preview) {
       if (!previewPanel || !preview) return;
       previewPanel.classList.add("show");
       lastDesignSystem = preview.designSystem || null;
       refreshDesignSystemView();
+      showFidelityReport(preview.fidelityReport || null);
       if (previewTitle) {
-        previewTitle.textContent = preview.title || "Capture ready";
+        const fr = preview.fidelityReport;
+        previewTitle.textContent = fr?.label
+          ? `${preview.title || "Capture ready"} · ${fr.label}`
+          : preview.title || "Capture ready";
       }
       if (previewWarnings) {
         previewWarnings.innerHTML = "";
@@ -422,18 +548,21 @@
         return;
       }
       hidePreview();
+      if (res.preview?.fidelityReport) showFidelityReport(res.preview.fidelityReport);
+      const fr = res.preview?.fidelityReport;
       const size =
         res.preview?.summary?.rootSize ||
         (res.preview?.bytes ? `${Math.round(res.preview.bytes / 1024)} KB` : "");
       const label = res.preview?.captureLabel || res.preview?.title || "";
+      const fidelityBit = fr?.label ? ` · ${fr.label}` : "";
       showProgress(
         100,
         label
-          ? `Copied ${label}${size ? ` · ${size}` : ""} — paste in Figma (⌘/Ctrl+V).`
-          : "Copied! Paste into Figma Desktop (Cmd/Ctrl+V).",
+          ? `Copied ${label}${size ? ` · ${size}` : ""}${fidelityBit} — paste in Figma (⌘/Ctrl+V).`
+          : `Copied! Paste into Figma Desktop (Cmd/Ctrl+V).${fidelityBit}`,
         false
       );
-      hideProgress(1800);
+      hideProgress(2200);
     }
 
     async function startConvert() {
@@ -509,6 +638,7 @@
       custom: { title: "Custom", sub: "Custom viewport width", mode: "custom", icon: "edit" },
       select: { title: "Select", sub: "Capture one element", mode: "selector", icon: "select" },
       design: { title: "Design system", sub: "Export .md + .json", mode: "design", icon: "layers" },
+      screenshot: { title: "Screenshot", sub: "Save PNG of the page", mode: "screenshot", icon: "camera" },
     };
 
     function refreshDesignSystemView() {
@@ -588,6 +718,26 @@
       if (convertBtn) convertBtn.style.display = showCapture ? "" : "none";
 
       if (tool === "design") refreshDesignSystemView();
+    }
+
+    async function takeScreenshot(mode) {
+      if (busy) return;
+      busy = true;
+      showProgress(10, mode === "custom" ? "Select a region…" : "Capturing screenshot…", false);
+      try {
+        const res = await send({ type: "htfy_SCREENSHOT", mode, format: "png" });
+        if (!res?.ok) {
+          const cancelled = /cancel/i.test(res?.error || "");
+          showProgress(100, res?.error || "Screenshot failed", !cancelled);
+          hideProgress(cancelled ? 1200 : 2800);
+          return;
+        }
+        showProgress(100, `Saved ${res.filename || "screenshot.png"}`, false);
+        hideProgress(1800);
+      } catch (err) {
+        showProgress(100, err?.message || "Screenshot failed", true);
+        hideProgress(2800);
+      }
     }
 
     function openPanel(tool, opts = {}) {
@@ -862,8 +1012,15 @@
       btn.textContent = "Copy to clipboard";
       if (res?.ok) {
         hidePreview();
-        showProgress(100, "Copied! Paste into Figma Desktop (Cmd/Ctrl+V).", false);
-        hideProgress(1500);
+        const fr = lastFidelityReport;
+        showProgress(
+          100,
+          fr?.label
+            ? `Copied · ${fr.label} — paste in Figma (⌘/Ctrl+V).`
+            : "Copied! Paste into Figma Desktop (Cmd/Ctrl+V).",
+          false
+        );
+        hideProgress(1800);
       } else {
         showProgress(100, res?.error || "Copy failed", true);
         hideProgress(2500);
@@ -873,6 +1030,20 @@
     $("#discardPreview")?.addEventListener("click", () => {
       send({ type: "htfy_DISCARD_PREVIEW" });
       hidePreview();
+      clearRasterHighlights();
+    });
+
+    $("#fidelityWhyBtn")?.addEventListener("click", () => {
+      const btn = $("#fidelityWhyBtn");
+      const list = $("#fidelityWhyList");
+      if (!btn || !list) return;
+      const open = list.classList.toggle("hidden") === false;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      btn.textContent = open ? "Hide Why Exact?" : "Why Exact?";
+    });
+
+    $("#highlightRastersBtn")?.addEventListener("click", () => {
+      highlightRastersOnPage(lastFidelityReport?.regions || []);
     });
 
     function designSystemSlug() {
@@ -971,6 +1142,15 @@
     $("#exportDesignSystemMain")?.addEventListener("click", downloadDesignSystemMd);
     $("#exportDesignSystemJson")?.addEventListener("click", downloadDesignSystemJson);
     $("#exportDesignSystemJsonPreview")?.addEventListener("click", downloadDesignSystemJson);
+
+    $$("[data-shot]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const mode = btn.getAttribute("data-shot") || "visible";
+        takeScreenshot(mode);
+      });
+    });
 
     // Progress from page (relay / fidelity) — DOM event crosses isolated world
     const onDomProgress = (e) => {

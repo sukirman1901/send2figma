@@ -181,6 +181,86 @@ export function composeFramesSideBySide(frames, { gap = GAP } = {}) {
   };
 }
 
+const KIND_LABELS = {
+  filter: "filter",
+  shadow: "shadow",
+  blend: "blend",
+  backdrop: "backdrop",
+  canvas: "canvas",
+  video: "video",
+  iframe: "iframe",
+  svg: "svg",
+  raster: "raster",
+};
+
+function formatByKind(byKind) {
+  const parts = Object.entries(byKind || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${KIND_LABELS[k] || k}×${n}`);
+  return parts.join(", ");
+}
+
+/**
+ * Trustable fidelity summary for the panel: % editable, raster breakdown, highlight rects.
+ */
+export function buildFidelityReport(data) {
+  const summary = data?.fidelity?.treeSummary || {};
+  const elements = Number(summary.elements) || 0;
+  const texts = Number(summary.texts) || 0;
+  const treeRasters = Number(summary.rasters) || 0;
+  const injected =
+    Number(data?.fidelity?.rastersInjected) ||
+    Number(data?.fidelity?.phaseA?.rastersInjected) ||
+    0;
+  const rasters = Math.max(treeRasters, injected);
+  const editableNodes = Math.max(0, elements - rasters);
+  const editablePct = elements > 0 ? Math.round((editableNodes / elements) * 100) : 100;
+  const qualityMode = data?.fidelity?.qualityMode === "exact" ? "exact" : "editable";
+
+  const hardRegions = Array.isArray(data?.fidelity?.hardRegions) ? data.fidelity.hardRegions : [];
+  const byKind = {};
+  for (const r of hardRegions) {
+    const k = r?.kind || "raster";
+    byKind[k] = (byKind[k] || 0) + 1;
+  }
+  if (!Object.keys(byKind).length && rasters > 0) {
+    byKind.raster = rasters;
+  }
+
+  const regions = hardRegions
+    .filter((r) => r && Number(r.width) > 1 && Number(r.height) > 1)
+    .slice(0, 48)
+    .map((r) => ({
+      kind: r.kind || "raster",
+      elementId: r.elementId || null,
+      tag: r.tag || null,
+      docX: Number.isFinite(r.docX) ? r.docX : null,
+      docY: Number.isFinite(r.docY) ? r.docY : null,
+      width: r.width,
+      height: r.height,
+    }));
+
+  const kindDetail = formatByKind(byKind);
+  return {
+    qualityMode,
+    elements,
+    texts,
+    rasters,
+    editablePct,
+    byKind,
+    regions,
+    label: `${editablePct}% editable`,
+    detail:
+      rasters > 0
+        ? `${rasters} raster${rasters === 1 ? "" : "s"}${kindDetail ? ` · ${kindDetail}` : ""}`
+        : "All captured layers stay editable",
+    modeHint:
+      qualityMode === "exact"
+        ? "Exact mode: closer look; filters/shadows/media may become images."
+        : "Editable mode: more layers you can edit in Figma.",
+  };
+}
+
 export function buildCaptureWarnings(data) {
   const warnings = [];
   const assets = data?.assets || {};
@@ -199,19 +279,22 @@ export function buildCaptureWarnings(data) {
     warnings.push(`${noUrl.length} font face(s) have no embeddable files — Figma may fall back.`);
   }
 
-  const rasters = data?.fidelity?.rastersInjected || data?.fidelity?.phaseA?.rastersInjected || 0;
-  if (rasters > 0) {
-    warnings.push(`${rasters} hard region(s) rasterized (not fully editable).`);
+  const report = buildFidelityReport(data);
+  if (report.rasters > 0) {
+    warnings.push(
+      `${report.rasters} region(s) rasterized (not fully editable)${
+        formatByKind(report.byKind) ? `: ${formatByKind(report.byKind)}` : ""
+      }.`
+    );
   }
 
   if (data?.fidelity?.forceOpen) {
     warnings.push("Open overlays were force-expanded for capture.");
   }
 
-  const summary = data?.fidelity?.treeSummary;
-  if (summary) {
+  if (report.elements > 0) {
     warnings.push(
-      `Layers: ${summary.elements} elements, ${summary.texts} text, ${summary.rasters} rasters.`
+      `Layers: ${report.elements} elements, ${report.texts} text · ${report.label}.`
     );
   }
 

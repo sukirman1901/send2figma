@@ -13,8 +13,20 @@ import {
   encodeFigh2dHtml,
 } from "./src/fidelityPost.js";
 import { resolveStylesheets } from "./src/cssFetch.js";
-import { buildCaptureWarnings } from "./src/composeFrames.js";
+import { buildCaptureWarnings, buildFidelityReport } from "./src/composeFrames.js";
 import { buildDesignSystemExport, summarizeDesignSystem } from "./src/designSystem.js";
+import {
+  connectMcpBridge,
+  disconnectMcpBridge,
+  setMcpHandlers,
+  mcpConnectionState,
+  getMcpSettings,
+} from "./src/mcpBridge.js";
+import {
+  cdpInspectNode,
+  cdpForceHoverAndCapture,
+  cdpCaptureNodePng,
+} from "./src/mcpCdpStyles.js";
 
 const BLOCKED = [
   "chrome://",
@@ -187,6 +199,7 @@ async function writeClipboard(html) {
 function previewPayload(data, html, extra = {}) {
   const warnings = buildCaptureWarnings(data);
   const summary = data?.fidelity?.treeSummary || null;
+  const fidelityReport = buildFidelityReport(data);
   const ds = data?.fidelity?.designSystemSummary || null;
   if (ds) {
     warnings.push(
@@ -201,6 +214,7 @@ function previewPayload(data, html, extra = {}) {
   return {
     warnings,
     summary: summary ? { ...summary, rootSize: rootSize || summary.rootSize } : { rootSize },
+    fidelityReport,
     designSystem: data?.fidelity?.designSystemExport || null,
     title: data?.documentTitle || "Capture",
     qualityMode: data?.fidelity?.qualityMode || null,
@@ -658,6 +672,303 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true;
 });
 
+async function setExtensionChromeVisible(tabId, visible) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: (show) => {
+        document.querySelectorAll('#htfyRoot, [id^="__htfy"], [data-htfy-chrome="1"]').forEach((el) => {
+          if (show) {
+            if (el.dataset.htfyShotHide === "1") {
+              el.style.removeProperty("display");
+              el.style.removeProperty("visibility");
+              delete el.dataset.htfyShotHide;
+            }
+          } else {
+            el.dataset.htfyShotHide = "1";
+            el.style.setProperty("display", "none", "important");
+            el.style.setProperty("visibility", "hidden", "important");
+          }
+        });
+      },
+      args: [!!visible],
+    });
+  } catch (_) {}
+}
+
+function screenshotFilename(mode, format = "png") {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  return `send2figma-${mode}-${stamp}.${format}`;
+}
+
+async function downloadDataUrl(dataUrl, filename) {
+  await chrome.downloads.download({
+    url: dataUrl,
+    filename,
+    saveAs: false,
+  });
+}
+
+async function cropDataUrlInTab(tabId, dataUrl, region) {
+  const [{ result } = {}] = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: async (src, rect) => {
+      const img = new Image();
+      img.src = src;
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = () => rej(new Error("Failed to load screenshot"));
+      });
+      const dpr = window.devicePixelRatio || 1;
+      const sx = Math.max(0, Math.round(rect.x * dpr));
+      const sy = Math.max(0, Math.round(rect.y * dpr));
+      const sw = Math.max(1, Math.round(rect.width * dpr));
+      const sh = Math.max(1, Math.round(rect.height * dpr));
+      const canvas = document.createElement("canvas");
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      return canvas.toDataURL("image/png");
+    },
+    args: [dataUrl, region],
+  });
+  if (!result) throw new Error("Crop failed");
+  return result;
+}
+
+/** Cap for GPU texture / CDP full-page capture (same ballpark as DevTools). */
+const FULLPAGE_MAX_CSS_PX = 16384;
+
+/**
+ * Full-page screenshot the way Chrome DevTools does it:
+ * getLayoutMetrics → setDeviceMetricsOverride to content size →
+ * captureScreenshot with clip covering the page → clear override.
+ * Bare captureBeyondViewport (no clip/resize) often tiles the viewport
+ * repeatedly when attached via chrome.debugger — that is the bug we hit.
+ */
+async function captureFullPageViaCdp(tabId) {
+  let attached = false;
+  let overridden = false;
+  try {
+    await chrome.debugger.attach({ tabId }, "1.3");
+    attached = true;
+    try {
+      await chrome.debugger.sendCommand({ tabId }, "Page.enable");
+    } catch (_) {}
+
+    const metrics = await chrome.debugger.sendCommand({ tabId }, "Page.getLayoutMetrics");
+    const content = metrics.cssContentSize || metrics.contentSize;
+    if (!content?.width || !content?.height) {
+      throw new Error("Could not read page content size");
+    }
+
+    const width = Math.max(1, Math.ceil(content.width));
+    const height = Math.max(1, Math.ceil(Math.min(content.height, FULLPAGE_MAX_CSS_PX)));
+
+    // Resize the emulated viewport to the full document so the compositor
+    // actually paints the whole page (classic DevTools / Puppeteer fullPage path).
+    await chrome.debugger.sendCommand({ tabId }, "Emulation.setDeviceMetricsOverride", {
+      mobile: false,
+      width,
+      height,
+      deviceScaleFactor: 1,
+      screenOrientation: { type: "portraitPrimary", angle: 0 },
+    });
+    overridden = true;
+    await new Promise((r) => setTimeout(r, 200));
+
+    const result = await chrome.debugger.sendCommand({ tabId }, "Page.captureScreenshot", {
+      format: "png",
+      fromSurface: true,
+      captureBeyondViewport: true,
+      clip: { x: 0, y: 0, width, height, scale: 1 },
+    });
+    if (!result?.data) throw new Error("Full-page capture returned empty");
+    return `data:image/png;base64,${result.data}`;
+  } finally {
+    if (overridden) {
+      try {
+        await chrome.debugger.sendCommand({ tabId }, "Emulation.clearDeviceMetricsOverride");
+      } catch (_) {}
+    }
+    if (attached) {
+      try {
+        await chrome.debugger.detach({ tabId });
+      } catch (_) {}
+    }
+  }
+}
+
+/** Scroll the page and stitch viewport captures — fallback when CDP resize fails. */
+async function captureFullPageByStitch(tab) {
+  const tabId = tab.id;
+  const [{ result: meta } = {}] = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: () => {
+      const el = document.documentElement;
+      const body = document.body;
+      return {
+        scrollX: window.scrollX || 0,
+        scrollY: window.scrollY || 0,
+        viewportW: window.innerWidth,
+        viewportH: window.innerHeight,
+        pageW: Math.max(el.scrollWidth, body?.scrollWidth || 0, el.clientWidth),
+        pageH: Math.max(el.scrollHeight, body?.scrollHeight || 0, el.clientHeight),
+        dpr: window.devicePixelRatio || 1,
+      };
+    },
+  });
+  if (!meta?.pageH) throw new Error("Could not measure page for stitch");
+
+  const pageH = Math.min(meta.pageH, FULLPAGE_MAX_CSS_PX);
+  const pageW = meta.pageW;
+  const viewportH = Math.max(1, meta.viewportH);
+  const shots = [];
+
+  try {
+    for (let y = 0; y < pageH; y += viewportH) {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: (sy) => {
+          window.scrollTo(0, sy);
+        },
+        args: [y],
+      });
+      // Let paint / sticky / lazy content settle after each scroll.
+      await new Promise((r) => setTimeout(r, 250));
+      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+      shots.push({ y, dataUrl });
+    }
+  } finally {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: (x, y) => {
+        window.scrollTo(x, y);
+      },
+      args: [meta.scrollX, meta.scrollY],
+    });
+  }
+
+  const [{ result } = {}] = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: async (tiles, w, h, dpr) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(w * dpr));
+      canvas.height = Math.max(1, Math.round(h * dpr));
+      const ctx = canvas.getContext("2d");
+      for (const tile of tiles) {
+        const img = new Image();
+        img.src = tile.dataUrl;
+        await new Promise((res, rej) => {
+          img.onload = res;
+          img.onerror = () => rej(new Error("Failed to load stitch tile"));
+        });
+        const destY = Math.round(tile.y * dpr);
+        const remaining = canvas.height - destY;
+        if (remaining <= 0) continue;
+        const srcH = Math.min(img.height, remaining);
+        ctx.drawImage(img, 0, 0, img.width, srcH, 0, destY, img.width, srcH);
+      }
+      return canvas.toDataURL("image/png");
+    },
+    args: [shots, pageW, pageH, meta.dpr],
+  });
+  if (!result) throw new Error("Stitch failed");
+  return result;
+}
+
+async function captureFullPagePng(tab) {
+  try {
+    return await captureFullPageViaCdp(tab.id);
+  } catch (err) {
+    console.warn("[Send2Figma] CDP full-page failed, stitching viewports:", err.message || err);
+    return await captureFullPageByStitch(tab);
+  }
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== "htfy_SCREENSHOT") return;
+  (async () => {
+    let tab;
+    try {
+      if (sender.tab?.id) tab = sender.tab;
+      else [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id || !tab.url || isBlockedUrl(tab.url)) {
+        sendResponse({ ok: false, error: "Can't screenshot this page." });
+        return;
+      }
+
+      const mode = msg.mode === "fullPage" || msg.mode === "custom" ? msg.mode : "visible";
+      const format = msg.format === "jpeg" ? "jpeg" : "png";
+
+      if (mode === "custom") {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["screenshot.js"],
+        });
+        const [{ result: region } = {}] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: async () => {
+            if (typeof window.__htfyStartScreenshotRegion !== "function") {
+              throw new Error("Region picker failed to load");
+            }
+            return window.__htfyStartScreenshotRegion();
+          },
+        });
+        if (!region?.width) {
+          sendResponse({ ok: false, error: "Selection cancelled" });
+          return;
+        }
+        await setExtensionChromeVisible(tab.id, false);
+        await new Promise((r) => setTimeout(r, 120));
+        try {
+          const raw = await chrome.tabs.captureVisibleTab(tab.windowId, {
+            format: "png",
+          });
+          const cropped = await cropDataUrlInTab(tab.id, raw, region);
+          const filename = screenshotFilename("region", "png");
+          await downloadDataUrl(cropped, filename);
+          sendResponse({ ok: true, mode: "custom", filename });
+        } finally {
+          await setExtensionChromeVisible(tab.id, true);
+        }
+        return;
+      }
+
+      await setExtensionChromeVisible(tab.id, false);
+      await new Promise((r) => setTimeout(r, 120));
+      try {
+        let dataUrl;
+        if (mode === "fullPage") {
+          dataUrl = await captureFullPagePng(tab);
+        } else {
+          dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+            format,
+            quality: format === "jpeg" ? 92 : undefined,
+          });
+        }
+        const filename = screenshotFilename(mode === "fullPage" ? "fullpage" : "visible", format);
+        await downloadDataUrl(dataUrl, filename);
+        sendResponse({ ok: true, mode, filename });
+      } finally {
+        await setExtensionChromeVisible(tab.id, true);
+      }
+    } catch (err) {
+      console.error("[Send2Figma] screenshot failed:", err);
+      if (tab?.id) await setExtensionChromeVisible(tab.id, true);
+      sendResponse({ ok: false, error: err.message || String(err) });
+    }
+  })();
+  return true;
+});
+
 chrome.commands.onCommand.addListener(async (command) => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -669,3 +980,321 @@ chrome.commands.onCommand.addListener(async (command) => {
     console.warn("[Send2Figma] command failed:", err);
   }
 });
+
+/* ─── Web Clone MCP bridge handlers ─── */
+
+async function mcpResolveTab(tabId) {
+  if (tabId) {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab?.id || isBlockedUrl(tab.url || "")) throw new Error("Tab blocked or missing");
+    return tab;
+  }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id || isBlockedUrl(tab.url || "")) throw new Error("No active http(s) tab");
+  return tab;
+}
+
+async function mcpInject(tabId, files) {
+  await chrome.scripting.executeScript({ target: { tabId }, files });
+}
+
+async function mcpFetchImage(url) {
+  try {
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const buf = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return {
+      url,
+      mimeType: blob.type || "application/octet-stream",
+      base64: btoa(binary),
+    };
+  } catch (err) {
+    return { url, error: err.message || String(err) };
+  }
+}
+
+async function mcpInspect(params = {}) {
+  const tab = await mcpResolveTab(params.tabId);
+  const selector = params.selector;
+  if (!selector) throw new Error("selector required");
+  await mcpInject(tab.id, ["mcpInspect.js"]);
+  const [{ result: domInspect } = {}] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: (sel, maxChildren) => window.__htfyMcpInspect.inspectDom(sel, maxChildren),
+    args: [selector, params.maxChildren || 40],
+  });
+  const fidelityNotes = [...(domInspect?.fidelityNotes || [])];
+  try {
+    const cdp = await cdpInspectNode(tab.id, selector);
+    if (domInspect?.root) {
+      domInspect.root.matchedRules = cdp.matchedRules;
+      if (Object.keys(cdp.computed || {}).length) domInspect.root.computed = cdp.computed;
+      domInspect.root.boxModel = cdp.boxModel;
+    }
+    fidelityNotes.push("cdp_matched_styles");
+  } catch (err) {
+    fidelityNotes.push(`cdp_unavailable: ${err.message || err}`);
+  }
+  return { ...domInspect, fidelityNotes };
+}
+
+async function mcpInteractionCss(params = {}) {
+  const tab = await mcpResolveTab(params.tabId);
+  const selector = params.selector;
+  if (!selector) throw new Error("selector required");
+  await mcpInject(tab.id, ["mcpInspect.js"]);
+  const [{ result: rules } = {}] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: (sel) => window.__htfyMcpInspect.collectInteractionRules(sel),
+    args: [selector],
+  });
+  const fidelityNotes = [];
+  let hoverScreenshotBase64;
+  if (params.forceHover || params.hoverScreenshot) {
+    try {
+      const forced = await cdpForceHoverAndCapture(tab.id, selector, {
+        screenshot: !!params.hoverScreenshot,
+      });
+      hoverScreenshotBase64 = forced.hoverScreenshotBase64;
+      fidelityNotes.push("forced_hover");
+    } catch (err) {
+      fidelityNotes.push(`force_hover_failed: ${err.message || err}`);
+    }
+  }
+  return { rules: rules || [], hoverScreenshotBase64, fidelityNotes };
+}
+
+async function mcpExportImages(params = {}) {
+  const tab = await mcpResolveTab(params.tabId);
+  const selector = params.selector;
+  if (!selector) throw new Error("selector required");
+  await mcpInject(tab.id, ["mcpInspect.js"]);
+  const [{ result: urls } = {}] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: (sel) => window.__htfyMcpInspect.collectImages(sel),
+    args: [selector],
+  });
+  const images = [];
+  for (const url of urls || []) {
+    images.push(await mcpFetchImage(url));
+  }
+  return { images };
+}
+
+async function mcpExtractTokens(params = {}) {
+  const tab = await mcpResolveTab(params.tabId);
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["designSystemCapture.js"],
+  });
+  const [{ result } = {}] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: () => {
+      const api = window.__htfyDesignSystemCapture;
+      if (!api?.extractDesignSystem) return { ok: false, error: "extractor missing" };
+      const root = document.body || document.documentElement;
+      return { ok: true, designTokens: api.extractDesignSystem(root) };
+    },
+  });
+  if (!result?.ok) throw new Error(result?.error || "token extract failed");
+  const exportPayload = buildDesignSystemExport({
+    documentTitle: tab.title || "Page",
+    fidelity: { designTokens: result.designTokens, treeSummary: null },
+  });
+  return {
+    tokens: exportPayload.tokens,
+    components: exportPayload.components,
+    summary: summarizeDesignSystem(result.designTokens),
+    source: exportPayload.source,
+  };
+}
+
+async function mcpBundle(params = {}) {
+  const tab = await mcpResolveTab(params.tabId);
+  const selector = params.selector;
+  if (!selector) throw new Error("selector required");
+
+  const inspect = await mcpInspect({
+    selector,
+    tabId: tab.id,
+    maxChildren: 40,
+  });
+  const interaction = await mcpInteractionCss({
+    selector,
+    tabId: tab.id,
+    forceHover: !!params.includeHoverShot,
+    hoverScreenshot: !!params.includeHoverShot,
+  });
+  const imagesRes = await mcpExportImages({ selector, tabId: tab.id });
+  let tokens = null;
+  try {
+    tokens = await mcpExtractTokens({ tabId: tab.id });
+  } catch (_) {}
+
+  await setExtensionChromeVisible(tab.id, false);
+  await new Promise((r) => setTimeout(r, 80));
+  let screenshotBase64;
+  try {
+    const shot = await cdpCaptureNodePng(tab.id, selector);
+    screenshotBase64 = shot.base64;
+  } catch (err) {
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+    screenshotBase64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+    inspect.fidelityNotes = [
+      ...(inspect.fidelityNotes || []),
+      `node_shot_fallback_visible: ${err.message || err}`,
+    ];
+  } finally {
+    await setExtensionChromeVisible(tab.id, true);
+  }
+
+  const [{ result: meta } = {}] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: () => ({
+      url: location.href,
+      title: document.title,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      dpr: window.devicePixelRatio || 1,
+    }),
+  });
+
+  const fidelityNotes = [
+    ...(inspect.fidelityNotes || []),
+    ...(interaction.fidelityNotes || []),
+    "Screenshot is pixel-accurate for the captured state; code recreate is best-effort.",
+  ];
+
+  return {
+    meta,
+    section: {
+      name: params.sectionName || selector,
+      selector,
+      html: inspect?.root?.html || "",
+    },
+    inspect,
+    interaction: {
+      rules: interaction.rules,
+      hoverScreenshotBase64: interaction.hoverScreenshotBase64,
+    },
+    screenshotBase64,
+    images: imagesRes.images,
+    tokens,
+    fidelityNotes,
+    agentPrompt: null,
+  };
+}
+
+setMcpHandlers({
+  async ping() {
+    const manifest = chrome.runtime.getManifest();
+    return {
+      pong: true,
+      extensionVersion: manifest.version,
+      bridge: mcpConnectionState(),
+    };
+  },
+
+  async list_tabs() {
+    const tabs = await chrome.tabs.query({});
+    return {
+      tabs: tabs
+        .filter((t) => t.id && t.url && !isBlockedUrl(t.url))
+        .map((t) => ({
+          id: t.id,
+          title: t.title || "",
+          url: t.url,
+          active: !!t.active,
+        })),
+    };
+  },
+
+  async screenshot(params = {}) {
+    const tab = await mcpResolveTab(params.tabId);
+    const mode = params.mode || "visible";
+    await setExtensionChromeVisible(tab.id, false);
+    await new Promise((r) => setTimeout(r, 80));
+    try {
+      if (mode === "fullPage") {
+        const dataUrl = await captureFullPagePng(tab);
+        return {
+          mimeType: "image/png",
+          base64: dataUrl.replace(/^data:image\/png;base64,/, ""),
+        };
+      }
+      if (mode === "node") {
+        if (!params.selector) throw new Error("selector required for node screenshot");
+        return await cdpCaptureNodePng(tab.id, params.selector);
+      }
+      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+      return {
+        mimeType: "image/png",
+        base64: dataUrl.replace(/^data:image\/png;base64,/, ""),
+      };
+    } finally {
+      await setExtensionChromeVisible(tab.id, true);
+    }
+  },
+
+  extract_tokens: mcpExtractTokens,
+  list_sections: async (params = {}) => {
+    const tab = await mcpResolveTab(params.tabId);
+    await mcpInject(tab.id, ["sectionDetect.js"]);
+    const [{ result } = {}] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      world: "MAIN",
+      func: () => window.__htfyDetectSections?.() || [],
+    });
+    return { sections: result || [] };
+  },
+  inspect: mcpInspect,
+  interaction_css: mcpInteractionCss,
+  export_images: mcpExportImages,
+  bundle: mcpBundle,
+});
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "htfy_MCP_STATUS") {
+    sendResponse({ state: mcpConnectionState() });
+    return false;
+  }
+  if (msg?.type === "htfy_MCP_RECONNECT") {
+    disconnectMcpBridge();
+    connectMcpBridge().then(() => sendResponse({ ok: true, state: mcpConnectionState() }));
+    return true;
+  }
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  connectMcpBridge().catch(() => {});
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  connectMcpBridge().catch(() => {});
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (changes.mcpPort || changes.mcpToken || changes.mcpEnabled) {
+    disconnectMcpBridge();
+    connectMcpBridge().catch(() => {});
+  }
+});
+
+try {
+  chrome.alarms.create("mcpKeepalive", { periodInMinutes: 0.5 });
+} catch (_) {}
+
+chrome.alarms?.onAlarm?.addListener((alarm) => {
+  if (alarm.name === "mcpKeepalive") connectMcpBridge().catch(() => {});
+});
+
+getMcpSettings().then(() => connectMcpBridge()).catch(() => {});

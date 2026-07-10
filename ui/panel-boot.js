@@ -8,8 +8,14 @@
   function ensureHost() {
     let host = document.getElementById(HOST_ID);
     const existing = host?.shadowRoot?.getElementById("htfyShell");
-    // Remount if dock is outdated (missing Presets tool)
-    if (existing && !host.shadowRoot.querySelector('.htfy-dock-item[data-action="preset"]')) {
+    // Remount if dock/panel is outdated (missing Screenshot or fidelity trust UI)
+    if (
+      existing &&
+      (!host.shadowRoot.querySelector('.htfy-dock-item[data-action="preset"]') ||
+        !host.shadowRoot.querySelector('.htfy-dock-item[data-action="screenshot"]') ||
+        !host.shadowRoot.querySelector("#fidelityReport") ||
+        !host.shadowRoot.querySelector("#fidelityWhyBtn"))
+    ) {
       existing.__htfyCleanup?.();
       host.remove();
       host = null;
