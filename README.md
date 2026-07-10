@@ -12,11 +12,15 @@ Also includes a small **Figma plugin** to apply extracted design-system tokens (
 - **Fidelity modes**
   - **Editable** — more layers you can edit in Figma
   - **Exact** — more rasterization for closer visual match (filters/shadows)
+  - After capture: **% editable** badge, raster breakdown, and **Highlight rasters on page**
+  - **Why Exact?** explainer in the panel
 - **Design system**
   - **Extract from page** (no capture required)
   - **Export `.md`** — AI / Cursor rulebook
   - **Export `.json`** — for the Figma design-token plugin
+- **Screenshot** — visible area, full page, or custom region (PNG download)
 - In-page dock UI (no popup) — progress stays visible while capturing
+- **Web Clone MCP** (optional) — Cursor can inspect the live tab (HTML, CSS rules, screenshots, tokens) without Figma; see [`mcp/README.md`](mcp/README.md)
 
 ## Requirements
 
@@ -63,6 +67,16 @@ Clipboard payload uses the `figh2d` format Figma understands as layered content.
 | Toggle panel | `Ctrl+Shift+H` |
 | Capture desktop preset | `Shift+Alt+D` |
 | Capture mobile preset | `Shift+Alt+M` |
+
+## Screenshot
+
+Open the **Screenshot** tool (camera icon on the dock):
+
+- **Visible area** — current viewport PNG
+- **Full page** — entire scrollable page (CDP; falls back to visible if unavailable)
+- **Custom region** — drag a rectangle, then download the crop
+
+The dock hides while capturing. Files download as `send2figma-*.png`.
 
 ## Design system
 

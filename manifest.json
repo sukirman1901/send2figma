@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "name": "Send2Figma",
   "short_name": "Send2Figma",
-  "version": "1.21",
+  "version": "1.25",
   "description": "Capture a webpage or element and paste it into Figma as editable layers — not a screenshot.",
   "permissions": [
     "activeTab",
@@ -13,7 +13,9 @@
     "clipboardWrite",
     "offscreen",
     "identity",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "downloads",
+    "alarms"
   ],
   "action": {
     "default_title": "Send2Figma",
@@ -53,6 +55,10 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "options_ui": {
+    "page": "ui/mcp-options.html",
+    "open_in_tab": true
   },
   "host_permissions": ["<all_urls>"],
   "content_scripts": [

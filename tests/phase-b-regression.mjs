@@ -3,6 +3,7 @@ import {
   composeFramesSideBySide,
   labelDualFrame,
   buildCaptureWarnings,
+  buildFidelityReport,
 } from "../src/composeFrames.js";
 import { encodeFigh2dHtml, decodeFigh2dHtml } from "../src/fidelityPost.js";
 import { readFileSync } from "node:fs";
@@ -83,7 +84,29 @@ function testWarnings() {
   assert.ok(w.some((x) => /font/i.test(x)));
   assert.ok(w.some((x) => /raster/i.test(x)));
   assert.ok(w.some((x) => /force-expanded/i.test(x)));
+  assert.ok(w.some((x) => /80% editable|Layers:/i.test(x)));
   assert.ok(!w.some((x) => /Dual frame/i.test(x)));
+}
+
+function testFidelityReport() {
+  const report = buildFidelityReport({
+    fidelity: {
+      qualityMode: "exact",
+      rastersInjected: 2,
+      treeSummary: { elements: 10, texts: 3, rasters: 2 },
+      hardRegions: [
+        { kind: "filter", docX: 10, docY: 20, width: 40, height: 40 },
+        { kind: "canvas", docX: 50, docY: 60, width: 80, height: 80 },
+      ],
+    },
+  });
+  assert.equal(report.editablePct, 80);
+  assert.equal(report.qualityMode, "exact");
+  assert.equal(report.rasters, 2);
+  assert.equal(report.byKind.filter, 1);
+  assert.equal(report.byKind.canvas, 1);
+  assert.equal(report.regions.length, 2);
+  assert.match(report.label, /80% editable/);
 }
 
 function testUiSurfaces() {
@@ -94,28 +117,40 @@ function testUiSurfaces() {
   assert.match(html, /htfy_CONFIRM_COPY/);
   assert.doesNotMatch(html, /dualFrameToggle/);
   assert.doesNotMatch(html, /dualFramePart/);
+  assert.match(html, /fidelityReport|fidelityWhyBtn|highlightRastersBtn/);
+  assert.match(html, /showFidelityReport|highlightRastersOnPage/);
   const boot = readFileSync(join(__dirname, "../ui/panel-boot.js"), "utf8");
   assert.match(boot, /htfyRoot/);
   assert.match(boot, /__htfyTogglePanel/);
   assert.match(html, /htfy-dock/);
+  assert.match(html, /data-action=\"screenshot\"|htfy_SCREENSHOT|data-shot/);
   const bg = readFileSync(join(__dirname, "../background.js"), "utf8");
   assert.match(bg, /reicon-inline\.js/);
+  assert.match(bg, /buildFidelityReport/);
   assert.doesNotMatch(bg, /labelDualFrame/);
   assert.doesNotMatch(bg, /dualFramePart/);
   assert.match(bg, /htfy_CONFIRM_COPY/);
   assert.match(bg, /action\.onClicked/);
   assert.match(bg, /htfy_START_PICKER/);
+  assert.match(bg, /htfy_SCREENSHOT/);
+  assert.match(bg, /getLayoutMetrics/);
+  assert.match(bg, /setDeviceMetricsOverride/);
+  assert.match(bg, /captureFullPageByStitch|captureFullPageViaCdp/);
+  assert.match(readFileSync(join(__dirname, "../screenshot.js"), "utf8"), /__htfyStartScreenshotRegion/);
   const manifest = JSON.parse(readFileSync(join(__dirname, "../manifest.json"), "utf8"));
   assert.equal(manifest.action.default_popup, undefined);
+  assert.ok(manifest.permissions?.includes("downloads"));
   assert.ok(manifest.web_accessible_resources?.length);
   const css = readFileSync(join(__dirname, "../ui/panel.css"), "utf8");
   assert.match(css, /89fe65/);
   assert.match(css, /htfy-dock/);
+  assert.match(css, /fidelity-report|fidelity-meter/);
 }
 
 testLabelDualFrame();
 testCompose();
 await testComposeRoundTrip();
 testWarnings();
+testFidelityReport();
 testUiSurfaces();
 console.log("phase-b-regression: ok");
