@@ -7,7 +7,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { BridgeServer } from "./bridge.js";
-import { ensureCacheDir, writeBase64File } from "./cache.js";
+import { ensureCacheDir, writeBase64File, writeTextFile } from "./cache.js";
+import { buildStrictAgentPrompt } from "./agentPrompt.js";
 
 const VERSION = "0.1.0";
 const PORT = Number(process.env.S2F_MCP_PORT || 17321);
@@ -108,7 +109,7 @@ server.tool(
 
 server.tool(
   "extract_tokens",
-  "Extract design-system tokens (colors, fonts, radii, spaces, components) from the active page.",
+  "Extract compact Style Reference markdown (styleReference) + agent designSystem (typography, colors, buttons, hover). DEFINE phase: save styleReference as STYLE.md before coding.",
   {
     tabId: z.number().optional(),
   },
@@ -132,11 +133,11 @@ server.tool(
 
 server.tool(
   "inspect_section",
-  "DevTools-grade inspect: sanitized HTML, matched CSS rules, computed styles, box model.",
+  "DevTools-grade inspect: HTML, CSS, computed styles, plus agent-ready specs (layoutSpec/typeSpec/colorSpec/aliases). Prefer specs over guessing when recreating UI.",
   {
     selector: z.string(),
     tabId: z.number().optional(),
-    maxChildren: z.number().default(40),
+    maxChildren: z.number().default(80),
   },
   async ({ selector, tabId, maxChildren }) => {
     const result = await bridge.request("inspect", {
@@ -223,7 +224,7 @@ server.tool(
 
 server.tool(
   "bundle_for_recreate",
-  "Primary agent tool: one-shot recreate bundle (HTML, styles, screenshots, tokens, prompt). Prefer this for cloning a section into Next/React/HTML.",
+  "Primary agent tool: recreate bundle with designSystem + specs v2 + strict agentPrompt. Follow designSystem for brand; section specs for layout. Do not invent colors/type/buttons.",
   {
     selector: z.string(),
     tabId: z.number().optional(),
@@ -245,11 +246,27 @@ server.tool(
     )) as {
       meta?: unknown;
       section?: { name?: string; selector?: string; html?: string };
-      inspect?: unknown;
+      inspect?: { specs?: unknown };
+      specs?: {
+        aliases?: Record<string, unknown>;
+        layoutSpec?: unknown;
+        typeSpec?: unknown;
+        colorSpec?: unknown;
+        rules?: string[];
+      };
       interaction?: { rules?: unknown; hoverScreenshotBase64?: string };
       screenshotBase64?: string;
       images?: Array<{ url: string; base64?: string; mimeType?: string; error?: string }>;
       tokens?: unknown;
+      designSystem?: {
+        brand?: Record<string, unknown>;
+        typography?: { primaryFont?: string };
+        colors?: Record<string, unknown>;
+        buttons?: Array<Record<string, unknown>>;
+        interaction?: { hoverRules?: unknown[]; note?: string };
+        rules?: string[];
+      };
+      styleReference?: string;
       fidelityNotes?: string[];
       agentPrompt?: string;
     };
@@ -271,7 +288,12 @@ server.tool(
       delete result.interaction.hoverScreenshotBase64;
     }
 
-    const images = [];
+    const images: Array<{
+      url: string;
+      path?: string;
+      mimeType?: string;
+      error?: string;
+    }> = [];
     let i = 0;
     for (const img of result.images || []) {
       if (img.base64) {
@@ -282,22 +304,35 @@ server.tool(
       }
     }
 
+    const specs = result.specs || (result.inspect as { specs?: typeof result.specs })?.specs || null;
+    const designSystem = result.designSystem || null;
+    const styleReference = result.styleReference || null;
+
+    if (styleReference) {
+      await writeTextFile(dir, "STYLE.md", styleReference);
+    }
+
     const agentPrompt =
       result.agentPrompt ||
-      [
-        `Recreate this UI section as ${framework}.`,
-        `Selector: ${selector}.`,
-        `Use the HTML structure, matched CSS rules, computed styles, and screenshot as source of truth.`,
-        `Screenshot path: ${defaultPath || "(inline missing)"}.`,
-        `Do not claim pixel-perfect parity; match layout, typography, and color closely, then refine.`,
-        `Fidelity notes: ${(result.fidelityNotes || []).join("; ") || "none"}.`,
-      ].join("\n");
+      buildStrictAgentPrompt({
+        framework,
+        selector,
+        sectionName: sectionName || result.section?.name,
+        screenshotPath: defaultPath,
+        specs: specs || undefined,
+        designSystem,
+        fidelityNotes: result.fidelityNotes || [],
+      });
 
     return textResult({
-      version: 1,
+      version: 3,
       meta: result.meta,
       section: result.section || { name: sectionName || selector, selector },
       inspect: result.inspect,
+      specs,
+      designSystem,
+      styleReference,
+      styleReferencePath: styleReference ? `${dir}/STYLE.md` : undefined,
       interaction: {
         rules: result.interaction?.rules || [],
         hoverScreenshotPath,
@@ -313,7 +348,25 @@ server.tool(
 );
 
 await bridge.start();
-console.error(`[send2figma-mcp] listening ws://127.0.0.1:${PORT} (extension must connect)`);
+// stderr only (stdout is MCP protocol). Cursor may label this [error] — it is informational.
+process.stderr.write(
+  `[send2figma-mcp] bridge ready on ws://127.0.0.1:${PORT} — connect the extension Options page\n`
+);
+
+const shutdown = async () => {
+  try {
+    await bridge.close();
+  } catch {
+    /* ignore */
+  }
+  process.exit(0);
+};
+process.on("SIGTERM", () => {
+  void shutdown();
+});
+process.on("SIGINT", () => {
+  void shutdown();
+});
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

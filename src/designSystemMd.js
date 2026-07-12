@@ -226,10 +226,358 @@ function componentTokenName(comp, part) {
 }
 
 /**
+ * Compact Style Reference (Superr-like) — DEFINE-phase artifact for agents.
+ * Prefer this over the long hierarchy dump when cloning a site.
+ *
+ * @param {object} exp — design system export (+ optional designSystem / buttons / links)
+ * @returns {string}
+ */
+export function formatCompactStyleReference(exp) {
+  const source = exp?.source || "Untitled";
+  const title = String(source).replace(/\s*[—|-]\s*.*$/, "").trim() || "Untitled";
+  const tokens = exp?.tokens || {};
+  const colors = tokens.colors || [];
+  const fontFamilies = tokens.fontFamilies || [];
+  const fonts = tokens.fonts || [];
+  const fontSizes = sortByPxAsc(tokens.fontSizes || []);
+  const fontWeights = [...(tokens.fontWeights || [])].sort(
+    (a, b) => (parseInt(a.value, 10) || 0) - (parseInt(b.value, 10) || 0)
+  );
+  const radii = sortByPxAsc(tokens.radii || []);
+  const spaces = sortByPxAsc(tokens.spaces || []);
+  const shadows = tokens.shadows || [];
+  const buttons = exp?.buttons || exp?.designSystem?.buttons || [];
+  const links = exp?.links || exp?.designSystem?.links || [];
+  const hoverRules = exp?.designSystem?.interaction?.hoverRules || [];
+  const theme = detectTheme(colors);
+  const colorSemantics = buildColorSemantics(colors, theme);
+  const sizeSemantics = buildSizeSemantics(spaces, radii);
+  const primaryFont = fontFamilies[0]?.family || fonts[0]?.value || "system-ui";
+  const secondaryFont = fontFamilies[1]?.family || null;
+
+  const findSem = (part) => colorSemantics.find((s) => s.semantic.includes(part));
+  const dsColors = exp?.designSystem?.colors || {};
+  const dsBrand = exp?.designSystem?.brand || {};
+  const canvas =
+    dsColors.surface ||
+    dsBrand.surface ||
+    findSem("bg-primary")?.hex ||
+    colors.find((c) => lum(c.hex || "") > 0.9)?.hex;
+  const ink =
+    dsColors.textPrimary ||
+    dsBrand.textPrimary ||
+    findSem("text-primary")?.hex ||
+    colors.find((c) => lum(c.hex || "") < 0.35 && lum(c.hex || "") > 0.08)?.hex ||
+    colors.find((c) => lum(c.hex || "") < 0.25)?.hex;
+  const accent =
+    dsColors.primary ||
+    dsBrand.primaryAction ||
+    findSem("bg-accent")?.hex ||
+    buttons[0]?.backgroundColorHex ||
+    buttons[0]?.background;
+  const surface2 = dsColors.surface && dsColors.surface !== canvas ? null : findSem("bg-secondary")?.hex;
+
+  const voiceBits = [
+    theme === "dark" ? "A dark UI" : "A light UI",
+    canvas ? `grounded on ${canvas}` : null,
+    ink ? `with ${ink} as primary ink` : null,
+    accent ? `and ${accent} as the action accent` : null,
+    primaryFont ? `Type is led by ${primaryFont}` : null,
+  ].filter(Boolean);
+
+  const lines = [];
+  const push = (...xs) => lines.push(...xs);
+
+  push(`# ${title} — Style Reference`);
+  push(`> ${voiceBits.join(". ") || "Captured from live page."}. Measured values only — do not invent tokens.`);
+  push("");
+  push(`**Theme:** ${theme}`);
+  push("");
+  push(
+    `${title} is rebuilt from a live capture. Prefer named tokens below for all UI. Section layout measures (padding/gap) may override spacing when cloning a specific block. Decorative colors that appear rarely should stay decorative — do not promote them to buttons or links unless listed under Components.`
+  );
+  push("");
+
+  // ——— Colors ———
+  push(`## Tokens — Colors`);
+  push("");
+  push(`| Name | Value | Token | Role |`);
+  push(`|------|-------|-------|------|`);
+
+  const namedColors = [];
+  const pushColor = (name, hex, token, role) => {
+    if (!hex) return;
+    if (namedColors.some((c) => c.hex === hex)) return;
+    namedColors.push({ name, hex, token, role });
+    push(`| ${name} | \`${hex}\` | \`${token}\` | ${role} |`);
+  };
+
+  pushColor("Canvas", canvas, "--color-canvas", "Page background and default surfaces");
+  pushColor("Ink", ink, "--color-ink", "Primary body and UI text");
+  if (surface2) pushColor("Surface Tint", surface2, "--color-surface-tint", "Secondary panels / cards");
+  pushColor("Accent", accent, "--color-accent", "Primary actions and brand emphasis");
+  if (buttons[1]?.backgroundColorHex || buttons[1]?.background) {
+    pushColor(
+      "Accent Secondary",
+      buttons[1].backgroundColorHex || buttons[1].background,
+      "--color-accent-secondary",
+      "Secondary CTA fill"
+    );
+  }
+  for (const c of colors.slice(0, 10)) {
+    const hex = c.hex || rgbToHex(c.value);
+    const found = (c.foundation || `--color-${slug(c.token)}`).replace(/^--color-/, "");
+    pushColor(titleCase(found), hex, c.foundation || `--color-${slug(found)}`, "Foundation swatch from page");
+  }
+  push("");
+
+  // ——— Typography ———
+  push(`## Tokens — Typography`);
+  push("");
+  const families = fontFamilies.length
+    ? fontFamilies
+    : fonts.map((f) => ({
+        family: f.value,
+        token: `--font-${slug(f.value)}`,
+        sizes: fontSizes.map((s) => s.value),
+        weights: fontWeights.map((w) => w.value),
+        tags: [],
+      }));
+
+  families.slice(0, 3).forEach((f, i) => {
+    const role =
+      i === 0
+        ? "Primary display, heading, and body"
+        : "Secondary UI / navigation labels";
+    push(`### ${f.family} — ${role} · \`${f.token || `--font-${slug(f.family)}`}\``);
+    push(`- **Weights:** ${(f.weights || fontWeights.map((w) => w.value)).slice(0, 6).join(", ") || "—"}`);
+    push(`- **Sizes:** ${(f.sizes || fontSizes.map((s) => s.value)).slice(0, 10).join(", ") || "—"}`);
+    push(`- **Role:** ${role}. Use this family for the roles above; do not invent a third family.`);
+    push("");
+  });
+
+  push(`### Type Scale`);
+  push("");
+  push(`| Role | Size | Token |`);
+  push(`|------|------|-------|`);
+  fontSizes.forEach((s, i) => {
+    const px = parsePx(s.value);
+    const role = typeRole(px, i, fontSizes.length);
+    push(`| ${role} | ${s.value} | \`--text-${role}\` |`);
+  });
+  if (!fontSizes.length) push(`| body | 16px | \`--text-body\` |`);
+  push("");
+
+  // ——— Spacing & shapes ———
+  push(`## Tokens — Spacing & Shapes`);
+  push("");
+  const base =
+    spaces.map((s) => parsePx(s.value)).find((n) => n === 4 || n === 8) || 4;
+  push(`**Base unit:** ${base}px`);
+  push("");
+  push(`### Spacing Scale`);
+  push("");
+  push(`| Name | Value | Token |`);
+  push(`|------|-------|-------|`);
+  for (const s of spaces.slice(0, 14)) {
+    const px = parsePx(s.value);
+    push(`| ${px ?? s.value} | ${s.value} | \`--spacing-${slug(px ?? s.value)}\` |`);
+  }
+  if (!spaces.length) push(`| 8 | 8px | \`--spacing-8\` |`);
+  push("");
+
+  push(`### Border Radius`);
+  push("");
+  push(`| Element | Value |`);
+  push(`|---------|-------|`);
+  const btnR = buttons[0]?.borderRadius || buttons[0]?.radius;
+  if (btnR) push(`| buttons | ${btnR} |`);
+  for (const r of radii.slice(0, 6)) {
+    const px = parsePx(r.value) || 0;
+    const label = px >= 999 || px >= 40 ? "pill / large" : px >= 16 ? "cards / controls" : "inputs / chips";
+    push(`| ${label} | ${r.value} |`);
+  }
+  if (!radii.length && !btnR) push(`| controls | 8px |`);
+  push("");
+
+  if (shadows.length) {
+    push(`### Shadows`);
+    push("");
+    push(`| Name | Value | Token |`);
+    push(`|------|-------|-------|`);
+    shadows.slice(0, 4).forEach((s, i) => {
+      push(`| ${i === 0 ? "default" : `shadow-${i + 1}`} | \`${String(s.value).slice(0, 120)}\` | \`--shadow-${i + 1}\` |`);
+    });
+    push("");
+  }
+
+  // ——— Components ———
+  push(`## Components`);
+  push("");
+  if (buttons.length) {
+    buttons.slice(0, 6).forEach((b, i) => {
+      const role = b.role || (i === 0 ? "primary" : "secondary");
+      const label = titleCase(String(role).replace(/-/g, " "));
+      push(`### ${label} Button`);
+      push(`**Role:** ${role === "primary" ? "Primary call-to-action" : "Secondary / alternate action"}`);
+      push("");
+      const bg = b.backgroundColorHex || b.background || "—";
+      const fg = b.colorHex || b.foreground || b.color || "—";
+      push(
+        `Fill \`${bg}\`, text \`${fg}\`, height ${b.height || "—"}, radius ${b.borderRadius || b.radius || "—"}, type ${b.fontSize || "—"} / weight ${b.fontWeight || "—"}, padding \`${b.padding || "—"}\`${b.text ? `. Sample label: “${b.text}”` : ""}.`
+      );
+      push("");
+    });
+  } else {
+    push(`_No opaque button variants captured — inspect CTAs in the target section._`);
+    push("");
+  }
+
+  if (links.length) {
+    push(`### Nav / Text Link`);
+    push(`**Role:** Navigation and inline links`);
+    push("");
+    const l = links[0];
+    push(
+      `Color \`${l.colorHex || l.color || "—"}\`, type ${l.fontSize || "—"} / weight ${l.fontWeight || "—"}, line-height ${l.lineHeight || "—"}.`
+    );
+    push("");
+  }
+
+  if (hoverRules.length) {
+    push(`### Hover / Interaction`);
+    push("");
+    push(`Captured :hover rules (apply; do not invent):`);
+    push("");
+    for (const h of hoverRules.slice(0, 8)) {
+      push(`- \`${h.selector}\` — \`${String(h.cssText || "").slice(0, 160)}\``);
+    }
+    push("");
+  }
+
+  // ——— Do / Don't ———
+  push(`## Do's and Don'ts`);
+  push("");
+  push(`### Do`);
+  push(`- Use **${primaryFont}** for primary UI type${secondaryFont ? `; reserve **${secondaryFont}** for secondary labels` : ""}`);
+  if (canvas) push(`- Keep the canvas at \`${canvas}\` unless a section alias overrides`);
+  if (ink) push(`- Use \`${ink}\` for body/UI text`);
+  if (accent) push(`- Use \`${accent}\` only for primary actions / brand emphasis listed above`);
+  if (btnR) push(`- Match button radius \`${btnR}\` and measured heights — do not switch to full-pill unless captured`);
+  push(`- Prefer tokens in this file over raw capture dumps`);
+  push("");
+  push(`### Don't`);
+  push(`- Don't invent brand hex or type sizes not listed here`);
+  push(`- Don't promote rare decorative swatches to buttons/links`);
+  push(`- Don't replace measured spacing with default Tailwind steps`);
+  if (!shadows.length) push(`- Don't add heavy shadows or glass that weren't captured`);
+  push(`- Don't skip DEFINE — write/update this Style Reference before BUILD`);
+  push("");
+
+  // ——— Surfaces ———
+  push(`## Surfaces`);
+  push("");
+  push(`| Level | Name | Value | Purpose |`);
+  push(`|-------|------|-------|---------|`);
+  if (canvas) push(`| 0 | Canvas | \`${canvas}\` | Page background |`);
+  if (surface2) push(`| 1 | Surface Tint | \`${surface2}\` | Secondary panels |`);
+  if (accent) push(`| 2 | Accent | \`${accent}\` | Action / brand surfaces |`);
+  push("");
+
+  // ——— Agent guide ———
+  push(`## Agent Prompt Guide`);
+  push("");
+  push(`**Quick Color Reference**`);
+  if (canvas) push(`- canvas: ${canvas}`);
+  if (ink) push(`- text: ${ink}`);
+  if (accent) push(`- accent / primary action: ${accent}`);
+  if (surface2) push(`- surface tint: ${surface2}`);
+  push(`- font: ${primaryFont}`);
+  push("");
+  push(`**Example Component Prompts**`);
+  if (buttons[0]) {
+    const b = buttons[0];
+    push(
+      `1. Build primary button: fill ${b.backgroundColorHex || b.background}, text ${b.colorHex || b.color}, height ${b.height}, radius ${b.borderRadius || b.radius}, type ${primaryFont} ${b.fontSize}/${b.fontWeight}.`
+    );
+  } else {
+    push(`1. Build UI only from tokens in this file; measure missing CTAs from section specs.`);
+  }
+  push(`2. Build page chrome on canvas ${canvas || "(from tokens)"} with ink ${ink || "(from tokens)"}.`);
+  push(`3. Clone a section only after reading section \`specs.aliases\` — they win on padding/gap conflicts.`);
+  push("");
+
+  // ——— CSS ———
+  push(`## Quick Start`);
+  push("");
+  push(`### CSS Custom Properties`);
+  push("");
+  push("```css");
+  push(":root {");
+  push("  /* Colors */");
+  for (const c of namedColors.slice(0, 12)) {
+    push(`  ${c.token}: ${c.hex};`);
+  }
+  push("");
+  push("  /* Typography */");
+  push(
+    `  --font-primary: '${primaryFont}', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;`
+  );
+  if (secondaryFont) {
+    push(
+      `  --font-secondary: '${secondaryFont}', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;`
+    );
+  }
+  fontSizes.forEach((s, i) => {
+    const role = typeRole(parsePx(s.value), i, fontSizes.length);
+    push(`  --text-${role}: ${s.value};`);
+  });
+  for (const w of fontWeights.slice(0, 4)) {
+    const label =
+      String(w.value) === "700" || String(w.value) === "bold"
+        ? "bold"
+        : String(w.value) === "600"
+          ? "semibold"
+          : String(w.value) === "500"
+            ? "medium"
+            : "regular";
+    push(`  --font-weight-${label}: ${w.value};`);
+  }
+  push("");
+  push("  /* Spacing & radius */");
+  for (const s of spaces.slice(0, 12)) {
+    const px = parsePx(s.value);
+    push(`  --spacing-${slug(px ?? s.value)}: ${s.value};`);
+  }
+  for (const r of radii.slice(0, 6)) {
+    push(`  --radius-${slug(r.value)}: ${r.value};`);
+  }
+  if (btnR) push(`  --radius-buttons: ${btnR};`);
+  push("}");
+  push("```");
+  push("");
+  push(`---`);
+  push(`_Send2Figma compact Style Reference · DEFINE before PLAN/BUILD_`);
+  push("");
+
+  return lines.join("\n");
+}
+
+/**
  * @param {object} exp
  * @returns {string}
  */
 export function formatDesignSystemMarkdown(exp) {
+  // Compact Style Reference is the default DEFINE artifact (Superr-like).
+  return formatCompactStyleReference(exp);
+}
+
+/** Legacy long-form hierarchy dump (optional). */
+export function formatDesignSystemMarkdownDetailed(exp) {
+  return formatCompactStyleReference(exp) + "\n\n" + _formatLegacyHierarchy(exp);
+}
+
+function _formatLegacyHierarchy(exp) {
   const source = exp?.source || "Untitled";
   const title = String(source).replace(/\s*[—|-]\s*.*$/, "").trim() || "Untitled";
   const tokens = exp?.tokens || {};
@@ -255,7 +603,7 @@ export function formatDesignSystemMarkdown(exp) {
   const lines = [];
   const push = (...xs) => lines.push(...xs);
 
-  push(`# ${title} — Design System`);
+  push(`# ${title} — Design System (detailed)`);
   push("");
   push(`> AI rulebook for rebuilding this UI. Prefer **semantic** tokens in components; never hard-code raw values when a token exists.`);
   push("");
@@ -283,10 +631,7 @@ export function formatDesignSystemMarkdown(exp) {
   push(`\`\`\``);
   push("");
 
-  // ——— Foundation: Colors ———
   push(`## Foundation — Colors`);
-  push("");
-  push(`Raw palette from the page (opaque colors, HSL-sorted). These are the **only** allowed hex sources.`);
   push("");
   push(`| Foundation | Value | Count |`);
   push(`|------------|-------|-------|`);
@@ -298,11 +643,8 @@ export function formatDesignSystemMarkdown(exp) {
   if (!colors.length) push(`| — | — | — |`);
   push("");
 
-  // Author CSS variables
   if (cssVariables.length) {
     push(`### Author CSS variables (from :root / stylesheets)`);
-    push("");
-    push(`Prefer these names when they already encode intent.`);
     push("");
     push(`| Variable | Value | Resolved |`);
     push(`|----------|-------|----------|`);
@@ -312,10 +654,7 @@ export function formatDesignSystemMarkdown(exp) {
     push("");
   }
 
-  // ——— Semantic: Colors ———
   push(`## Semantic — Colors`);
-  push("");
-  push(`Intent-based aliases. **Use these in UI code.**`);
   push("");
   push(`| Semantic | → Foundation | Value | Role |`);
   push(`|----------|--------------|-------|------|`);
@@ -325,7 +664,6 @@ export function formatDesignSystemMarkdown(exp) {
   if (!colorSemantics.length) push(`| — | — | — | — |`);
   push("");
 
-  // ——— Foundation: Typography ———
   push(`## Foundation — Typography`);
   push("");
   const families = fontFamilies.length
@@ -373,7 +711,6 @@ export function formatDesignSystemMarkdown(exp) {
     push("");
   }
 
-  // ——— Foundation: Spacing & radius ———
   push(`## Foundation — Spacing & radius`);
   push("");
   push(`| Foundation | Value |`);
@@ -398,12 +735,8 @@ export function formatDesignSystemMarkdown(exp) {
   if (!sizeSemantics.length) push(`| — | — | — | — |`);
   push("");
 
-  // ——— Components ———
   push(`## Component tokens`);
   push("");
-  push(`Each repeated pattern aliases **semantic** tokens. Rebuild components with these contracts.`);
-  push("");
-
   if (components.length) {
     for (const c of components) {
       const label = titleCase(String(c.name || "Component").replace(/^Component\//, ""));
@@ -411,167 +744,29 @@ export function formatDesignSystemMarkdown(exp) {
       push(`- **Tag:** \`<${c.tag || "div"}>\`${c.className ? ` · \`.${c.className}\`` : ""}`);
       push(`- **Footprint:** ~${c.width || "?"}×${c.height || "?"}px · seen ${c.count || "?"}×`);
       push("");
-      push(`| Component token | Suggested alias |`);
-      push(`|-----------------|-----------------|`);
-      const textSem = colorSemantics.find((s) => s.semantic.includes("text-primary"));
-      const bgSem = colorSemantics.find((s) => s.semantic.includes("bg-primary"));
-      const radiusSem = sizeSemantics.find((s) => s.semantic.includes("radius"));
-      const padSem = sizeSemantics.find((s) => s.semantic.includes("padding"));
-      push(
-        `| \`${componentTokenName(c, "text")}\` | \`${textSem?.semantic || "--color-text-primary"}\` |`
-      );
-      push(`| \`${componentTokenName(c, "bg")}\` | \`${bgSem?.semantic || "--color-bg-primary"}\` |`);
-      if (radiusSem) {
-        push(`| \`${componentTokenName(c, "radius")}\` | \`${radiusSem.semantic}\` |`);
-      }
-      if (padSem) {
-        push(`| \`${componentTokenName(c, "padding-x")}\` | \`${padSem.semantic}\` |`);
-      }
-      if (c.styles) {
-        push("");
-        push(`**Captured sample styles:**`);
-        push(`- color: \`${c.styles.color || "—"}\``);
-        push(`- background: \`${c.styles.backgroundColor || "—"}\``);
-        push(`- radius: \`${c.styles.borderRadius || "—"}\``);
-        push(`- type: \`${c.styles.fontSize || "—"} / ${c.styles.fontWeight || "—"} / ${c.styles.fontFamily || "—"}\``);
-        push(`- padding: \`${c.styles.padding || "—"}\``);
-        push(`- border: \`${c.styles.border || "—"}\``);
-      }
-      push("");
     }
   } else {
     push(`_No repeated component signatures detected._`);
     push("");
   }
 
-  // ——— Rules ———
   push(`## Rules — Do`);
   push("");
   push(`- Use semantic color tokens for text, surfaces, borders, and accents.`);
-  push(`- Keep the type stack led by **${primaryFont}**; add a second family only if captured above.`);
-  if (fontWeights.length) {
-    push(`- Limit weights to: ${fontWeights.map((w) => w.value).join(", ")}.`);
-  }
-  push(`- Space with the spacing scale; prefer semantic spacing roles over magic numbers.`);
-  if (!shadows.length) {
-    push(`- Prefer flat surfaces; elevation via spacing/tone, not new shadow recipes.`);
-  }
+  push(`- Keep the type stack led by **${primaryFont}**.`);
   push("");
-
   push(`## Rules — Don't`);
   push("");
   push(`- Don't hard-code hex/px in components when a semantic token exists.`);
-  push(`- Don't create parallel foundations for the same visual value.`);
-  push(`- Don't mix extra font families for body UI.`);
-  if (!shadows.length) push(`- Don't add drop shadows or glass that weren't in the source.`);
-  push(`- Don't skip the hierarchy (component → semantic → foundation → value).`);
+  push(`- Don't invent tokens not in this file.`);
   push("");
-
-  // ——— Agent prompts ———
-  push(`## Agent prompt snippets`);
-  push("");
-  push(`### Quick color reference`);
-  for (const s of colorSemantics.slice(0, 8)) {
-    push(`- ${s.semantic.replace(/^--color-/, "")}: ${s.hex}`);
-  }
-  push(`- font: ${primaryFont}`);
-  push("");
-
-  if (components.length) {
-    push(`### Example rebuild prompts`);
-    components.slice(0, 4).forEach((c, i) => {
-      const label = titleCase(String(c.name || `Component ${i + 1}`).replace(/^Component\//, ""));
-      push(
-        `${i + 1}. **${label}**: Build \`<${c.tag || "div"}>\` using \`${componentTokenName(c, "text")}\` → text-primary, \`${componentTokenName(c, "bg")}\` → bg-primary, type ${primaryFont}. Match ~${c.width || "?"}×${c.height || "?"}px.`
-      );
-    });
+  if (shadows.length) {
+    push(`## Shadows`);
+    push("");
+    for (const s of shadows.slice(0, 4)) push(`- \`${String(s.value).slice(0, 160)}\``);
     push("");
   }
 
-  // ——— CSS output ———
-  push(`## Quick Start — CSS`);
-  push("");
-  push("```css");
-  push(":root {");
-  push("  /* Foundation — color */");
-  for (const c of colors) {
-    const hex = c.hex || rgbToHex(c.value) || c.value;
-    push(`  ${c.foundation || `--color-${slug(c.token)}`}: ${hex};`);
-  }
-  push("");
-  push("  /* Semantic — color */");
-  for (const s of colorSemantics) {
-    push(`  ${s.semantic}: var(${s.foundation});`);
-  }
-  push("");
-  push("  /* Foundation — type */");
-  push(
-    `  --font-sans: '${primaryFont}', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;`
-  );
-  fontSizes.forEach((s, i) => {
-    const role = typeRole(parsePx(s.value), i, fontSizes.length);
-    push(`  --text-${role}: ${s.value};`);
-  });
-  for (const w of fontWeights) {
-    const label =
-      String(w.value) === "700" || String(w.value) === "bold"
-        ? "bold"
-        : String(w.value) === "600"
-          ? "semibold"
-          : String(w.value) === "500"
-            ? "medium"
-            : "regular";
-    push(`  --font-weight-${label}: ${w.value};`);
-  }
-  push("");
-  push("  /* Foundation — space / radius */");
-  for (const s of spaces) {
-    const px = parsePx(s.value);
-    push(`  --spacing-${slug(px ?? s.value)}: ${s.value};`);
-  }
-  for (const r of radii) {
-    push(`  --radius-${slug(r.value)}: ${r.value};`);
-  }
-  push("");
-  push("  /* Semantic — space / radius */");
-  for (const s of sizeSemantics) {
-    push(`  ${s.semantic}: var(${s.foundation});`);
-  }
-  push("}");
-  push("```");
-  push("");
-
-  push(`## Quick Start — Tailwind v4`);
-  push("");
-  push("```css");
-  push("@theme {");
-  for (const c of colors) {
-    const hex = c.hex || rgbToHex(c.value) || c.value;
-    push(`  ${c.foundation || `--color-${slug(c.token)}`}: ${hex};`);
-  }
-  for (const s of colorSemantics) {
-    push(`  ${s.semantic}: var(${s.foundation});`);
-  }
-  push(
-    `  --font-sans: '${primaryFont}', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;`
-  );
-  fontSizes.forEach((s, i) => {
-    const role = typeRole(parsePx(s.value), i, fontSizes.length);
-    push(`  --text-${role}: ${s.value};`);
-  });
-  for (const s of spaces) {
-    const px = parsePx(s.value);
-    push(`  --spacing-${slug(px ?? s.value)}: ${s.value};`);
-  }
-  for (const r of radii) {
-    push(`  --radius-${slug(r.value)}: ${r.value};`);
-  }
-  push("}");
-  push("```");
-  push("");
-  push(`---`);
-  push(`_Send2Figma design system · hierarchy: default → foundation → semantic → component_`);
-  push("");
-
   return lines.join("\n");
 }
+

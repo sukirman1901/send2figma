@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { execSync } from "node:child_process";
 import { WebSocketServer, type WebSocket } from "ws";
 
 export type BridgeRequest = {
@@ -22,6 +23,47 @@ type Pending = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Cursor may restart MCP quickly; free stale listeners from our previous process. */
+export function freeStaleMcpPort(port: number) {
+  try {
+    const out = execSync(`lsof -nP -iTCP:${port} -sTCP:LISTEN -t`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!out) return;
+    for (const pidStr of out.split("\n")) {
+      const pid = Number(pidStr);
+      if (!pid || pid === process.pid) continue;
+      let cmd = "";
+      try {
+        cmd = execSync(`ps -p ${pid} -o command=`, {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch {
+        continue;
+      }
+      if (
+        cmd.includes("mcp/dist/index") ||
+        cmd.includes("send2figma-web-clone") ||
+        cmd.includes("send2figma-mcp")
+      ) {
+        try {
+          process.kill(pid, "SIGTERM");
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } catch {
+    /* nothing listening */
+  }
+}
+
 export class BridgeServer {
   private wss: WebSocketServer | null = null;
   private extension: WebSocket | null = null;
@@ -32,13 +74,32 @@ export class BridgeServer {
     private readonly token: string
   ) {}
 
-  start(): Promise<void> {
+  private listenOnce(): Promise<void> {
     return new Promise((resolve, reject) => {
       const wss = new WebSocketServer({ host: "127.0.0.1", port: this.port });
       this.wss = wss;
 
-      wss.once("listening", () => resolve());
-      wss.once("error", (err) => reject(err));
+      const onListening = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = (err: Error) => {
+        cleanup();
+        try {
+          wss.close();
+        } catch {
+          /* ignore */
+        }
+        this.wss = null;
+        reject(err);
+      };
+      const cleanup = () => {
+        wss.off("listening", onListening);
+        wss.off("error", onError);
+      };
+
+      wss.once("listening", onListening);
+      wss.once("error", onError);
 
       wss.on("connection", (ws) => {
         let authed = false;
@@ -86,6 +147,31 @@ export class BridgeServer {
         });
       });
     });
+  }
+
+  async start(): Promise<void> {
+    freeStaleMcpPort(this.port);
+    await sleep(200);
+
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        await this.listenOnce();
+        return;
+      } catch (err) {
+        lastErr = err;
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (code === "EADDRINUSE") {
+          freeStaleMcpPort(this.port);
+          await sleep(250 * (attempt + 1));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr instanceof Error
+      ? lastErr
+      : new Error(`Failed to bind ws://127.0.0.1:${this.port}`);
   }
 
   get connected(): boolean {

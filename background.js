@@ -14,7 +14,7 @@ import {
 } from "./src/fidelityPost.js";
 import { resolveStylesheets } from "./src/cssFetch.js";
 import { buildCaptureWarnings, buildFidelityReport } from "./src/composeFrames.js";
-import { buildDesignSystemExport, summarizeDesignSystem } from "./src/designSystem.js";
+import { buildDesignSystemExport, summarizeDesignSystem, buildAgentDesignSystem, formatCompactStyleReference } from "./src/designSystem.js";
 import {
   connectMcpBridge,
   disconnectMcpBridge,
@@ -995,7 +995,7 @@ async function mcpResolveTab(tabId) {
 }
 
 async function mcpInject(tabId, files) {
-  await chrome.scripting.executeScript({ target: { tabId }, files });
+  await chrome.scripting.executeScript({ target: { tabId }, world: "MAIN", files });
 }
 
 async function mcpFetchImage(url) {
@@ -1026,7 +1026,7 @@ async function mcpInspect(params = {}) {
     target: { tabId: tab.id },
     world: "MAIN",
     func: (sel, maxChildren) => window.__htfyMcpInspect.inspectDom(sel, maxChildren),
-    args: [selector, params.maxChildren || 40],
+    args: [selector, params.maxChildren || 80],
   });
   const fidelityNotes = [...(domInspect?.fidelityNotes || [])];
   try {
@@ -1092,6 +1092,7 @@ async function mcpExtractTokens(params = {}) {
   const tab = await mcpResolveTab(params.tabId);
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
+    world: "MAIN",
     files: ["designSystemCapture.js"],
   });
   const [{ result } = {}] = await chrome.scripting.executeScript({
@@ -1100,20 +1101,66 @@ async function mcpExtractTokens(params = {}) {
     func: () => {
       const api = window.__htfyDesignSystemCapture;
       if (!api?.extractDesignSystem) return { ok: false, error: "extractor missing" };
-      const root = document.body || document.documentElement;
-      return { ok: true, designTokens: api.extractDesignSystem(root) };
+      // Prefer header/banner scope for button roles; fall back to body for full palette
+      const chromeRoot =
+        document.querySelector("header") ||
+        document.querySelector("[role='banner']") ||
+        document.body ||
+        document.documentElement;
+      const pageRoot = document.body || document.documentElement;
+      const pageTokens = api.extractDesignSystem(pageRoot);
+      const chromeTokens = chromeRoot !== pageRoot ? api.extractDesignSystem(chromeRoot) : null;
+      if (chromeTokens?.buttons?.length) {
+        pageTokens.buttons = chromeTokens.buttons;
+        pageTokens.links = chromeTokens.links?.length ? chromeTokens.links : pageTokens.links;
+      }
+      return { ok: true, designTokens: pageTokens };
     },
   });
   if (!result?.ok) throw new Error(result?.error || "token extract failed");
+
+  let interactionRules = [];
+  try {
+    await mcpInject(tab.id, ["mcpInspect.js"]);
+    const [{ result: rules } = {}] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      world: "MAIN",
+      func: () => {
+        const root = document.body || document.documentElement;
+        return window.__htfyMcpInspect?.collectInteractionRules
+          ? window.__htfyMcpInspect.collectInteractionRules("body")
+          : [];
+      },
+    });
+    interactionRules = Array.isArray(rules) ? rules : [];
+  } catch (_) {}
+
   const exportPayload = buildDesignSystemExport({
     documentTitle: tab.title || "Page",
     fidelity: { designTokens: result.designTokens, treeSummary: null },
   });
+  const designSystem = buildAgentDesignSystem({
+    tokens: exportPayload.tokens,
+    buttons: result.designTokens.buttons || exportPayload.buttons || [],
+    links: result.designTokens.links || exportPayload.links || [],
+    interactionRules,
+    source: exportPayload.source,
+  });
+
   return {
+    designSystem,
     tokens: exportPayload.tokens,
     components: exportPayload.components,
-    summary: summarizeDesignSystem(result.designTokens),
+    buttons: result.designTokens.buttons || [],
+    links: result.designTokens.links || [],
+    summary: {
+      ...summarizeDesignSystem(result.designTokens),
+      buttons: (result.designTokens.buttons || []).length,
+      hoverRules: designSystem.interaction?.hoverRules?.length || 0,
+    },
     source: exportPayload.source,
+    markdown: exportPayload.markdown,
+    styleReference: exportPayload.styleReference || exportPayload.markdown,
   };
 }
 
@@ -1125,7 +1172,7 @@ async function mcpBundle(params = {}) {
   const inspect = await mcpInspect({
     selector,
     tabId: tab.id,
-    maxChildren: 40,
+    maxChildren: 80,
   });
   const interaction = await mcpInteractionCss({
     selector,
@@ -1135,8 +1182,36 @@ async function mcpBundle(params = {}) {
   });
   const imagesRes = await mcpExportImages({ selector, tabId: tab.id });
   let tokens = null;
+  let designSystem = null;
+  let styleReference = null;
   try {
-    tokens = await mcpExtractTokens({ tabId: tab.id });
+    const tok = await mcpExtractTokens({ tabId: tab.id });
+    tokens = {
+      summary: tok.summary,
+      // Keep raw tokens available but prefer designSystem for agents
+      colors: tok.tokens?.colors?.slice(0, 16),
+      fontFamilies: tok.tokens?.fontFamilies?.slice(0, 4),
+      fontSizes: tok.tokens?.fontSizes?.slice(0, 10),
+    };
+    designSystem = buildAgentDesignSystem({
+      tokens: tok.tokens,
+      buttons: tok.buttons || [],
+      links: tok.links || [],
+      interactionRules: interaction.rules || [],
+      sectionAliases: inspect?.specs?.aliases || null,
+      source: tab.title || "Page",
+    });
+    styleReference =
+      tok.styleReference ||
+      formatCompactStyleReference({
+        source: tab.title || "Page",
+        exportedAt: new Date().toISOString(),
+        tokens: tok.tokens,
+        buttons: tok.buttons || [],
+        links: tok.links || [],
+        designSystem,
+        components: tok.components || [],
+      });
   } catch (_) {}
 
   await setExtensionChromeVisible(tab.id, false);
@@ -1170,7 +1245,7 @@ async function mcpBundle(params = {}) {
   const fidelityNotes = [
     ...(inspect.fidelityNotes || []),
     ...(interaction.fidelityNotes || []),
-    "Screenshot is pixel-accurate for the captured state; code recreate is best-effort.",
+    "Screenshot is pixel-accurate; code must follow specs — do not invent spacing/colors.",
   ];
 
   return {
@@ -1181,6 +1256,7 @@ async function mcpBundle(params = {}) {
       html: inspect?.root?.html || "",
     },
     inspect,
+    specs: inspect?.specs || null,
     interaction: {
       rules: interaction.rules,
       hoverScreenshotBase64: interaction.hoverScreenshotBase64,
@@ -1188,6 +1264,8 @@ async function mcpBundle(params = {}) {
     screenshotBase64,
     images: imagesRes.images,
     tokens,
+    designSystem,
+    styleReference,
     fidelityNotes,
     agentPrompt: null,
   };

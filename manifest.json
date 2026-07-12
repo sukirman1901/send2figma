@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "name": "Send2Figma",
   "short_name": "Send2Figma",
-  "version": "1.25",
+  "version": "1.29",
   "description": "Capture a webpage or element and paste it into Figma as editable layers — not a screenshot.",
   "permissions": [
     "activeTab",
