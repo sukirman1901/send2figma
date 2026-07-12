@@ -32,3 +32,4 @@ coverage/
 .cursor/
 *.canvas.tsx
 docs/superpowers/
+examples/

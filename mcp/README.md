@@ -25,7 +25,7 @@ npm install
 npm run build
 ```
 
-2. Load the **Send2Figma** extension (`chrome://extensions` → Load unpacked → repo root).
+2. Load the **Send2Figma** extension (`chrome://extensions` → Load unpacked → select the **`extension/`** folder).
 
 3. Open **extension Options** → generate MCP token → note port (`17321` default).
 
@@ -64,4 +64,4 @@ Screenshots/assets are written under `~/.send2figma-mcp/cache/` (override with `
 
 ## Spec
 
-See `docs/superpowers/specs/2026-07-11-web-clone-mcp-design.md`.
+See `docs/superpowers/specs/` locally if present (not published in the repo).

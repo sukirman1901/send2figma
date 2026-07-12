@@ -6,8 +6,8 @@ import {
   decodeFigh2dHtml,
   encodeFigh2dHtml,
   refillMissingAssets,
-} from "../src/fidelityPost.js";
-import { absolutizeCssUrls, resolveStylesheets } from "../src/cssFetch.js";
+} from "../extension/src/fidelityPost.js";
+import { absolutizeCssUrls, resolveStylesheets } from "../extension/src/cssFetch.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -84,48 +84,48 @@ async function testResolveInlineSheet() {
 }
 
 function testFixtureExists() {
-  const path = join(__dirname, "../fixtures/fidelity-fixture.html");
+  const path = join(__dirname, "../extension/fixtures/fidelity-fixture.html");
   const html = readFileSync(path, "utf8");
   assert.match(html, /dropdown/);
   assert.match(html, /linear-gradient/);
 }
 
 function testScriptSurfaces() {
-  const fidelity = readFileSync(join(__dirname, "../fidelity.js"), "utf8");
+  const fidelity = readFileSync(join(__dirname, "../extension/fidelity.js"), "utf8");
   assert.match(fidelity, /recoverInheritedCss|requestCssResolve|inheritedApplied/);
   assert.match(fidelity, /data-h2d-pseudo-host/);
   assert.match(fidelity, /exact && filterHeavy/);
   assert.match(fidelity, /prepare_timeout|withTimeout/);
   assert.match(fidelity, /Resolving CSS|Materializing|Fidelity prep timed out/);
   assert.match(fidelity, /markExtensionChrome|maxNodes:\s*4000/);
-  const helpers = readFileSync(join(__dirname, "../superDevHelpers.js"), "utf8");
+  const helpers = readFileSync(join(__dirname, "../extension/superDevHelpers.js"), "utf8");
   assert.match(helpers, /installRasterHygiene|harvestStylesheets|recoverInheritedCss/);
   assert.match(helpers, /stickyToRelative/);
   assert.match(helpers, /timeoutMs:\s*6000|timeoutMs = .*6000/);
   assert.match(helpers, /maxHtmlBytes|html_too_large|__skipped/);
   assert.match(helpers, /maxNodes/);
-  const picker = readFileSync(join(__dirname, "../picker.js"), "utf8");
+  const picker = readFileSync(join(__dirname, "../extension/picker.js"), "utf8");
   assert.match(picker, /ArrowUp|box-model|__htfyStartPicker/);
-  const bg = readFileSync(join(__dirname, "../background.js"), "utf8");
+  const bg = readFileSync(join(__dirname, "../extension/background.js"), "utf8");
   assert.match(bg, /htfy_RESOLVE_CSS|superDevHelpers\.js|resolveStylesheets/);
-  const post = readFileSync(join(__dirname, "../src/fidelityPost.js"), "utf8");
+  const post = readFileSync(join(__dirname, "../extension/src/fidelityPost.js"), "utf8");
   assert.match(post, /remeasureRegion|qualityMode/);
   assert.match(post, /extractDesignTokensLive|designTokensLiveFallback|tokensAreEmpty/);
-  const capture = readFileSync(join(__dirname, "../designSystemCapture.js"), "utf8");
+  const capture = readFileSync(join(__dirname, "../extension/designSystemCapture.js"), "utf8");
   assert.match(capture, /rgba\(\$\{r\}, \$\{g\}, \$\{b\}/);
   assert.doesNotMatch(capture, /a < 250\) return null/);
   const plugin = readFileSync(join(__dirname, "../figma-plugin/code.js"), "utf8");
   assert.match(plugin, /JSON has no tokens|Export \.json/);
-  const panel = readFileSync(join(__dirname, "../ui/panel.js"), "utf8");
+  const panel = readFileSync(join(__dirname, "../extension/ui/panel.js"), "utf8");
   assert.match(panel, /Tokens empty|designSystemTokenCount/);
   assert.match(panel, /Resolving CSS|Materializing|progressPct|Math\.max\(progressPct/);
   assert.match(panel, /Preparing fidelity/);
-  const patch = readFileSync(join(__dirname, "../src/treePatch.js"), "utf8");
+  const patch = readFileSync(join(__dirname, "../extension/src/treePatch.js"), "utf8");
   assert.match(patch, /EDITABLE_SKIP_INJECT|regionArea \* 4/);
 }
 
 function testInjectSkipsEffectKindsInEditable() {
-  return import("../src/treePatch.js").then(({ injectHardRegionRasters }) => {
+  return import("../extension/src/treePatch.js").then(({ injectHardRegionRasters }) => {
     const data = {
       root: {
         nodeType: 1,
@@ -173,6 +173,6 @@ await testResolveInlineSheet();
 testFixtureExists();
 testScriptSurfaces();
 await testInjectSkipsEffectKindsInEditable();
-assert.match(readFileSync(join(__dirname, "../src/treePatch.js"), "utf8"), /injectHardRegionRasters/);
+assert.match(readFileSync(join(__dirname, "../extension/src/treePatch.js"), "utf8"), /injectHardRegionRasters/);
 
 console.log("fidelity-regression: ok");

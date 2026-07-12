@@ -4,8 +4,8 @@ import {
   labelDualFrame,
   buildCaptureWarnings,
   buildFidelityReport,
-} from "../src/composeFrames.js";
-import { encodeFigh2dHtml, decodeFigh2dHtml } from "../src/fidelityPost.js";
+} from "../extension/src/composeFrames.js";
+import { encodeFigh2dHtml, decodeFigh2dHtml } from "../extension/src/fidelityPost.js";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -110,7 +110,7 @@ function testFidelityReport() {
 }
 
 function testUiSurfaces() {
-  const html = readFileSync(join(__dirname, "../ui/panel.js"), "utf8");
+  const html = readFileSync(join(__dirname, "../extension/ui/panel.js"), "utf8");
   assert.match(html, /qualityModeExact/);
   assert.match(html, /previewToggle/);
   assert.match(html, /previewPanel/);
@@ -119,12 +119,12 @@ function testUiSurfaces() {
   assert.doesNotMatch(html, /dualFramePart/);
   assert.match(html, /fidelityReport|fidelityWhyBtn|highlightRastersBtn/);
   assert.match(html, /showFidelityReport|highlightRastersOnPage/);
-  const boot = readFileSync(join(__dirname, "../ui/panel-boot.js"), "utf8");
+  const boot = readFileSync(join(__dirname, "../extension/ui/panel-boot.js"), "utf8");
   assert.match(boot, /htfyRoot/);
   assert.match(boot, /__htfyTogglePanel/);
   assert.match(html, /htfy-dock/);
   assert.match(html, /data-action=\"screenshot\"|htfy_SCREENSHOT|data-shot/);
-  const bg = readFileSync(join(__dirname, "../background.js"), "utf8");
+  const bg = readFileSync(join(__dirname, "../extension/background.js"), "utf8");
   assert.match(bg, /reicon-inline\.js/);
   assert.match(bg, /buildFidelityReport/);
   assert.doesNotMatch(bg, /labelDualFrame/);
@@ -136,12 +136,12 @@ function testUiSurfaces() {
   assert.match(bg, /getLayoutMetrics/);
   assert.match(bg, /setDeviceMetricsOverride/);
   assert.match(bg, /captureFullPageByStitch|captureFullPageViaCdp/);
-  assert.match(readFileSync(join(__dirname, "../screenshot.js"), "utf8"), /__htfyStartScreenshotRegion/);
-  const manifest = JSON.parse(readFileSync(join(__dirname, "../manifest.json"), "utf8"));
+  assert.match(readFileSync(join(__dirname, "../extension/screenshot.js"), "utf8"), /__htfyStartScreenshotRegion/);
+  const manifest = JSON.parse(readFileSync(join(__dirname, "../extension/manifest.json"), "utf8"));
   assert.equal(manifest.action.default_popup, undefined);
   assert.ok(manifest.permissions?.includes("downloads"));
   assert.ok(manifest.web_accessible_resources?.length);
-  const css = readFileSync(join(__dirname, "../ui/panel.css"), "utf8");
+  const css = readFileSync(join(__dirname, "../extension/ui/panel.css"), "utf8");
   assert.match(css, /89fe65/);
   assert.match(css, /htfy-dock/);
   assert.match(css, /fidelity-report|fidelity-meter/);

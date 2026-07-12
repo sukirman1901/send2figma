@@ -8,8 +8,8 @@ import {
   applyStructuralStyles,
   findBestNodeForRegion,
   summarizeTree,
-} from "../src/treePatch.js";
-import { encodeFigh2dHtml, decodeFigh2dHtml } from "../src/fidelityPost.js";
+} from "../extension/src/treePatch.js";
+import { encodeFigh2dHtml, decodeFigh2dHtml } from "../extension/src/fidelityPost.js";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -163,7 +163,7 @@ async function testRoundTripSnapshot() {
 }
 
 function testFixtureStillPresent() {
-  const html = readFileSync(join(__dirname, "../fixtures/fidelity-fixture.html"), "utf8");
+  const html = readFileSync(join(__dirname, "../extension/fixtures/fidelity-fixture.html"), "utf8");
   assert.match(html, /backdrop-filter|linear-gradient|dropdown/);
 }
 

@@ -12,30 +12,30 @@ const WebSocket = require("ws");
 function testFilesExist() {
   const root = join(__dirname, "..");
   for (const f of [
-    "sectionDetect.js",
-    "mcpInspect.js",
-    "src/mcpBridge.js",
-    "src/mcpCdpStyles.js",
-    "ui/mcp-options.html",
+    "extension/sectionDetect.js",
+    "extension/mcpInspect.js",
+    "extension/src/mcpBridge.js",
+    "extension/src/mcpCdpStyles.js",
+    "extension/ui/mcp-options.html",
     "mcp/src/index.ts",
     "mcp/package.json",
     "mcp/dist/index.js",
   ]) {
     assert.ok(readFileSync(join(root, f), "utf8").length > 50, f);
   }
-  const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(root, "extension/manifest.json"), "utf8"));
   assert.equal(manifest.options_ui.page, "ui/mcp-options.html");
   assert.ok(manifest.permissions.includes("alarms"));
 }
 
 function testSectionDetectApi() {
-  const src = readFileSync(join(__dirname, "../sectionDetect.js"), "utf8");
+  const src = readFileSync(join(__dirname, "../extension/sectionDetect.js"), "utf8");
   assert.match(src, /__htfyDetectSections/);
   assert.match(src, /header, nav, main/);
 }
 
 function testInspectApi() {
-  const src = readFileSync(join(__dirname, "../mcpInspect.js"), "utf8");
+  const src = readFileSync(join(__dirname, "../extension/mcpInspect.js"), "utf8");
   assert.match(src, /__htfyMcpInspect/);
   assert.match(src, /collectInteractionRules/);
   assert.match(src, /sanitizeHtml/);
