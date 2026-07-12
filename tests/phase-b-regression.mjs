@@ -124,6 +124,8 @@ function testUiSurfaces() {
   assert.match(boot, /__htfyTogglePanel/);
   assert.match(html, /htfy-dock/);
   assert.match(html, /data-action=\"screenshot\"|htfy_SCREENSHOT|data-shot/);
+  assert.match(html, /data-tool=\"settings\"|dockItem\(\"settings\"/);
+  assert.doesNotMatch(html, /dockItem\(\"crown\"/);
   const bg = readFileSync(join(__dirname, "../extension/background.js"), "utf8");
   assert.match(bg, /reicon-inline\.js/);
   assert.match(bg, /buildFidelityReport/);
@@ -135,6 +137,11 @@ function testUiSurfaces() {
   assert.match(bg, /htfy_SCREENSHOT/);
   assert.match(bg, /getLayoutMetrics/);
   assert.match(bg, /setDeviceMetricsOverride/);
+  // Phone/tablet presets use mobile viewport meta; paste safety comes from always
+  // passing capture width (DOM frame), not from forcing mobile:false.
+  assert.match(bg, /useMobile/);
+  assert.match(bg, /__htfy_text_adjust/);
+  assert.match(bg, /width:\s*msg\.width\s*\|\|\s*null/);
   assert.match(bg, /captureFullPageByStitch|captureFullPageViaCdp/);
   assert.match(readFileSync(join(__dirname, "../extension/screenshot.js"), "utf8"), /__htfyStartScreenshotRegion/);
   const manifest = JSON.parse(readFileSync(join(__dirname, "../extension/manifest.json"), "utf8"));

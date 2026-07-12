@@ -29,7 +29,7 @@
       </div>
       <div class="htfy-dock-sep"></div>
       <div class="htfy-dock-system">
-        ${dockItem("crown", "crown", "Upgrade / Pro", "crown")}
+        ${dockItem("settings", "settings", "Settings")}
       </div>
     </div>
   </div>
@@ -149,6 +149,45 @@
           <button type="button" class="primary-outline" data-shot="custom">Custom region</button>
         </div>
         <p class="design-meta" style="margin-top:10px">Downloads to your computer. Dock hides while capturing.</p>
+      </div>
+
+      <div id="toolSettings" class="tool-view" data-tool="settings">
+        <p class="tool-lead">Defaults for capture and MCP.</p>
+
+        <div class="section-label">Capture defaults</div>
+        <div class="quality-row" id="settingsQualityRow">
+          <label><input type="radio" name="settingsQualityMode" id="settingsQualityEditable" value="editable" checked> Editable</label>
+          <label><input type="radio" name="settingsQualityMode" id="settingsQualityExact" value="exact"> Exact</label>
+        </div>
+        <p class="settings-hint">Used when you open Presets / Custom. You can still switch per capture.</p>
+        <label class="multi-toggle-row">
+          <span class="switch"><input type="checkbox" id="settingsPreviewToggle" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          <span class="multi-toggle-label">Preview before copy</span>
+        </label>
+
+        <div class="section-label">Default preset</div>
+        <div class="select-root" id="settingsPresetSelect">
+          <button type="button" class="select-trigger" id="settingsPresetTrigger" aria-haspopup="listbox">
+            <span id="settingsPresetLabel">iPhone (375px)</span>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="select-content" id="settingsPresetContent" role="listbox">
+            <div class="select-item selected" data-value="375" role="option"><span>iPhone (375px)</span><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="select-item" data-value="360" role="option"><span>Android (360px)</span><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="select-item" data-value="768" role="option"><span>iPad (768px)</span><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="select-item" data-value="1440" role="option"><span>Desktop (1440px)</span><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <select id="settingsPreset" class="sr-only-select" tabindex="-1" aria-hidden="true">
+            <option value="375">iPhone (375px)</option>
+            <option value="360">Android (360px)</option>
+            <option value="768">iPad (768px)</option>
+            <option value="1440">Desktop (1440px)</option>
+          </select>
+        </div>
+
+        <div class="section-label">Web Clone MCP</div>
+        <p class="settings-hint">Connect Cursor to this tab for inspect / clone without Figma.</p>
+        <button type="button" id="openMcpOptions" class="primary-outline settings-full-btn">Open MCP options</button>
       </div>
 
       <div id="multiGate" class="multi-gate hidden">
@@ -348,6 +387,67 @@
         convertBtn.disabled = false;
         convertBtn.textContent = "Send to Figma";
       }
+    }
+
+    const SETTINGS_KEY = "htfy_panel_settings";
+    const PRESET_LABELS = {
+      375: "iPhone (375px)",
+      360: "Android (360px)",
+      768: "iPad (768px)",
+      1440: "Desktop (1440px)",
+    };
+
+    function applyPresetValue(selectEl, labelEl, items, value) {
+      const v = String(value);
+      if (selectEl) selectEl.value = v;
+      if (labelEl) labelEl.textContent = PRESET_LABELS[v] || PRESET_LABELS["375"];
+      items?.forEach((item) => item.classList.toggle("selected", item.dataset.value === v));
+    }
+
+    async function loadPanelSettings() {
+      try {
+        const data = await chrome.storage.local.get(SETTINGS_KEY);
+        const s = data[SETTINGS_KEY] || {};
+        const quality = s.qualityMode === "exact" ? "exact" : "editable";
+        const preview = s.previewBeforeCopy !== false;
+        const preset = PRESET_LABELS[s.defaultPreset] ? String(s.defaultPreset) : "375";
+
+        const exact = $("#qualityModeExact");
+        const editable = $("#qualityModeEditable");
+        if (quality === "exact") {
+          if (exact) exact.checked = true;
+        } else if (editable) editable.checked = true;
+        const sExact = $("#settingsQualityExact");
+        const sEditable = $("#settingsQualityEditable");
+        if (quality === "exact") {
+          if (sExact) sExact.checked = true;
+        } else if (sEditable) sEditable.checked = true;
+
+        if (previewToggle) previewToggle.checked = preview;
+        const sPreview = $("#settingsPreviewToggle");
+        if (sPreview) sPreview.checked = preview;
+
+        applyPresetValue(
+          $("#devicePreset"),
+          $("#devicePresetLabel"),
+          $$("#devicePresetContent .select-item"),
+          preset
+        );
+        applyPresetValue(
+          $("#settingsPreset"),
+          $("#settingsPresetLabel"),
+          $$("#settingsPresetContent .select-item"),
+          preset
+        );
+      } catch (_) {}
+    }
+
+    async function savePanelSettings(partial) {
+      try {
+        const data = await chrome.storage.local.get(SETTINGS_KEY);
+        const next = { ...(data[SETTINGS_KEY] || {}), ...partial };
+        await chrome.storage.local.set({ [SETTINGS_KEY]: next });
+      } catch (_) {}
     }
 
     function qualityMode() {
@@ -639,6 +739,7 @@
       select: { title: "Select", sub: "Capture one element", mode: "selector", icon: "select" },
       design: { title: "Design system", sub: "Export .md + .json", mode: "design", icon: "layers" },
       screenshot: { title: "Screenshot", sub: "Save PNG of the page", mode: "screenshot", icon: "camera" },
+      settings: { title: "Settings", sub: "Defaults & MCP", mode: "settings", icon: "settings" },
     };
 
     function refreshDesignSystemView() {
@@ -760,12 +861,6 @@
     $$(".htfy-dock-item").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const action = btn.dataset.action;
-        if (action === "crown") {
-          openPanel(mode === "design" ? "design" : "preset");
-          const upgrade = $("#upgradeBtn");
-          if (upgrade && !upgrade.classList.contains("hidden")) upgrade.click();
-          return;
-        }
         // Toggle: clicking active open tool closes panel
         if (panel.classList.contains("open") && btn.classList.contains("active")) {
           closePanel();
@@ -786,6 +881,7 @@
     // Auth bootstrap — guest-first
     showView(appView);
     showGuestUI();
+    loadPanelSettings();
     send({ type: "htfy_AUTH_STATUS" }).then((res) => {
       if (!res?.ok) return;
       if (typeof res.config?.freeExportLimit === "number") freeLimit = res.config.freeExportLimit;
@@ -823,6 +919,8 @@
     });
     shadowRoot.addEventListener("click", (e) => {
       if (!userMenu?.contains(e.target) && e.target !== userChip) userMenu?.classList.remove("open");
+      closeSelect();
+      closeSettingsSelect();
     });
 
     $("#signOutBtn")?.addEventListener("click", async () => {
@@ -923,9 +1021,89 @@
         selectItems.forEach((i) => i.classList.remove("selected"));
         item.classList.add("selected");
         closeSelect();
+        savePanelSettings({ defaultPreset: item.dataset.value });
+        applyPresetValue(
+          $("#settingsPreset"),
+          $("#settingsPresetLabel"),
+          $$("#settingsPresetContent .select-item"),
+          item.dataset.value
+        );
       });
     });
-    shadowRoot.addEventListener("click", closeSelect);
+
+    const settingsPreset = $("#settingsPreset");
+    const settingsPresetTrigger = $("#settingsPresetTrigger");
+    const settingsPresetContent = $("#settingsPresetContent");
+    const settingsPresetLabel = $("#settingsPresetLabel");
+    const settingsPresetItems = $$("#settingsPresetContent .select-item");
+
+    function closeSettingsSelect() {
+      settingsPresetTrigger?.classList.remove("open");
+      settingsPresetContent?.classList.remove("open");
+    }
+
+    settingsPresetTrigger?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = !settingsPresetContent?.classList.contains("open");
+      closeSelect();
+      closeSettingsSelect();
+      if (open) {
+        settingsPresetTrigger.classList.add("open");
+        settingsPresetContent.classList.add("open");
+      }
+    });
+    settingsPresetItems.forEach((item) => {
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        applyPresetValue(settingsPreset, settingsPresetLabel, settingsPresetItems, item.dataset.value);
+        applyPresetValue($("#devicePreset"), $("#devicePresetLabel"), selectItems, item.dataset.value);
+        closeSettingsSelect();
+        savePanelSettings({ defaultPreset: item.dataset.value });
+      });
+    });
+
+    function syncQuality(quality) {
+      const exact = quality === "exact";
+      const qExact = $("#qualityModeExact");
+      const qEdit = $("#qualityModeEditable");
+      const sExact = $("#settingsQualityExact");
+      const sEdit = $("#settingsQualityEditable");
+      if (exact) {
+        if (qExact) qExact.checked = true;
+        if (sExact) sExact.checked = true;
+      } else {
+        if (qEdit) qEdit.checked = true;
+        if (sEdit) sEdit.checked = true;
+      }
+      savePanelSettings({ qualityMode: exact ? "exact" : "editable" });
+    }
+
+    ["#qualityModeEditable", "#qualityModeExact", "#settingsQualityEditable", "#settingsQualityExact"].forEach(
+      (sel) => {
+        $(sel)?.addEventListener("change", (e) => {
+          if (!e.target.checked) return;
+          syncQuality(e.target.value === "exact" ? "exact" : "editable");
+        });
+      }
+    );
+
+    function syncPreview(on) {
+      if (previewToggle) previewToggle.checked = on;
+      const sPreview = $("#settingsPreviewToggle");
+      if (sPreview) sPreview.checked = on;
+      savePanelSettings({ previewBeforeCopy: !!on });
+    }
+
+    previewToggle?.addEventListener("change", (e) => syncPreview(e.target.checked));
+    $("#settingsPreviewToggle")?.addEventListener("change", (e) => syncPreview(e.target.checked));
+
+    $("#openMcpOptions")?.addEventListener("click", () => {
+      try {
+        chrome.runtime.openOptionsPage();
+      } catch (_) {
+        showBillingError("Couldn't open options page.");
+      }
+    });
 
     $("#multiSizeToggle")?.addEventListener("change", (e) => {
       const on = e.target.checked;

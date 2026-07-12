@@ -111,16 +111,68 @@ async function showToast(tabId, text, isError) {
 
 async function withDeviceEmulation(tabId, { width, height, mobile }, run) {
   let attached = false;
+  let textAdjustInjected = false;
+  const w = Math.max(1, Math.round(Number(width) || 0));
+  const h = Math.max(1, Math.round(Number(height) || 900));
+  if (!w) return run({ emulated: false });
+
+  // Phone/tablet presets need mobile:true so <meta viewport> and device-width
+  // media queries match real devices. Desktop-resized (mobile:false) at 375px
+  // often looks "crushed". Paste reliability comes from always passing `width`
+  // into captureForDesign (DOM frame), not from forcing mobile:false.
+  const useMobile = mobile == null ? w < 1024 : !!mobile;
+
   try {
     await chrome.debugger.attach({ tabId }, "1.3");
     attached = true;
     await chrome.debugger.sendCommand({ tabId }, "Emulation.setDeviceMetricsOverride", {
-      width,
-      height: height || 900,
+      width: w,
+      height: h,
       deviceScaleFactor: 1,
-      mobile: !!mobile,
+      mobile: useMobile,
+      screenWidth: w,
+      screenHeight: h,
     });
-    await new Promise((r) => setTimeout(r, 250));
+    if (useMobile) {
+      // Keep viewport/meta mobile behavior, but avoid touch-hover oddities.
+      try {
+        await chrome.debugger.sendCommand({ tabId }, "Emulation.setTouchEmulationEnabled", {
+          enabled: false,
+        });
+      } catch (_) {}
+    }
+    // Soften Chrome text autosizing so type sizes stay closer to CSS (Figma fidelity).
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: () => {
+          if (document.getElementById("__htfy_text_adjust")) return true;
+          const s = document.createElement("style");
+          s.id = "__htfy_text_adjust";
+          s.textContent =
+            "html{text-size-adjust:100%!important;-webkit-text-size-adjust:100%!important;}";
+          document.documentElement.appendChild(s);
+          return true;
+        },
+      });
+      textAdjustInjected = true;
+    } catch (_) {}
+
+    // Layout + media-query settle after resize.
+    await new Promise((r) => setTimeout(r, 500));
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: () => {
+          window.dispatchEvent(new Event("resize"));
+          window.scrollTo(0, 0);
+        },
+      });
+    } catch (_) {}
+    await new Promise((r) => setTimeout(r, 100));
+
     return await run({ emulated: true });
   } catch (err) {
     console.warn(
@@ -129,6 +181,17 @@ async function withDeviceEmulation(tabId, { width, height, mobile }, run) {
     );
     return await run({ emulated: false });
   } finally {
+    if (textAdjustInjected) {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          world: "MAIN",
+          func: () => {
+            document.getElementById("__htfy_text_adjust")?.remove();
+          },
+        });
+      } catch (_) {}
+    }
     if (attached) {
       try {
         await chrome.debugger.sendCommand({ tabId }, "Emulation.clearDeviceMetricsOverride");
@@ -166,7 +229,9 @@ async function runCapture(tab, msg, { emulated }) {
         {
           selector: msg.selector || "body",
           verbose: false,
-          width: emulated ? null : msg.width || null,
+          // Always pass width so the DOM framer also pins <html> width.
+          // Safe alongside CDP resize; helps when media queries need both.
+          width: msg.width || null,
           qualityMode: msg.qualityMode || "editable",
         },
       ],

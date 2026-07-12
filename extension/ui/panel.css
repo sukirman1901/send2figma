@@ -136,15 +136,6 @@
   transform: translateX(-50%);
 }
 
-.htfy-dock-item.crown {
-  background: rgba(255, 255, 255, 0.06);
-  color: #cdfe67;
-}
-
-.htfy-dock-item.crown:hover {
-  background: #89fe6526;
-}
-
 .htfy-dock-tip {
   position: absolute;
   bottom: calc(100% + 10px);
@@ -1300,4 +1291,29 @@
 
 .billing-status.failed {
   color: var(--danger);
+}
+
+/* Settings tool */
+.settings-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-c);
+}
+
+.settings-full-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+#toolSettings .quality-row {
+  margin-bottom: 8px;
+}
+
+#toolSettings .section-label {
+  margin-top: 16px;
+}
+
+#toolSettings .section-label:first-of-type {
+  margin-top: 4px;
 }
