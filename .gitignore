@@ -31,3 +31,4 @@ coverage/
 # Cursor / local
 .cursor/
 *.canvas.tsx
+docs/superpowers/
