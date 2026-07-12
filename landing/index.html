@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Send2Figma — Paste any webpage into Figma as editable layers</title>
+    <meta
+      name="description"
+      content="Capture live pages from Chrome and paste into Figma as editable layers—not a flat screenshot. Export Style Reference tokens and clone UI in Cursor via MCP."
+    />
+    <link rel="canonical" href="https://send2figma.com/" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Send2Figma" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://send2figma.com/" />
+    <meta property="og:title" content="Send2Figma — Paste any webpage into Figma as editable layers" />
+    <meta
+      property="og:description"
+      content="Capture live pages from Chrome and paste into Figma as editable layers—not a flat screenshot. Tokens + Cursor MCP included."
+    />
+    <meta property="og:image" content="https://send2figma.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Send2Figma Chrome extension capturing a webpage into Figma layers" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Send2Figma — Paste any webpage into Figma as editable layers" />
+    <meta
+      name="twitter:description"
+      content="Capture live pages from Chrome and paste into Figma as editable layers—not a flat screenshot."
+    />
+    <meta name="twitter:image" content="https://send2figma.com/og-image.png" />
+    <meta name="twitter:image:alt" content="Send2Figma Chrome extension capturing a webpage into Figma layers" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://send2figma.com/#website",
+            "url": "https://send2figma.com/",
+            "name": "Send2Figma",
+            "description": "Capture live pages from Chrome and paste into Figma as editable layers.",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://send2figma.com/#app",
+            "name": "Send2Figma",
+            "applicationCategory": "BrowserApplication",
+            "operatingSystem": "Chrome",
+            "url": "https://send2figma.com/",
+            "description": "Chrome extension that captures a live webpage or element and pastes it into Figma as editable layers—not a flat screenshot.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://send2figma.com/#webpage",
+            "url": "https://send2figma.com/",
+            "name": "Send2Figma — Paste any webpage into Figma as editable layers",
+            "isPartOf": { "@id": "https://send2figma.com/#website" },
+            "about": { "@id": "https://send2figma.com/#app" },
+            "description": "Capture live pages from Chrome and paste into Figma as editable layers—not a flat screenshot. Export Style Reference tokens and clone UI in Cursor via MCP.",
+            "inLanguage": "en"
+          }
+        ]
+      }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/global.css" />
+    <link rel="stylesheet" href="./css/hero.css" />
+    <link rel="stylesheet" href="./css/sections.css" />
+    <!-- Same reicon.dev icons as the live extension dock/panel -->
+    <script src="./js/icons.js"></script>
+  </head>
+  <body>
+    <header class="preview preview--chrome">
+      <div class="atlas-nav-wrap">
+        <nav class="atlas-nav" aria-label="Primary" data-atlas-nav>
+          <a class="atlas-brand" href="./">
+            <span class="atlas-brand__mark" data-reicon="code-12" aria-hidden="true"></span>
+            <span class="atlas-brand__name">Send2Figma</span>
+          </a>
+
+          <div class="atlas-menu">
+            <div class="atlas-dropdown">
+              <button type="button" class="atlas-trigger" aria-expanded="false" aria-haspopup="true">
+                Product
+                <svg class="atlas-chevron" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path
+                    d="M3.5 5.25L7 8.75L10.5 5.25"
+                    stroke="currentColor"
+                    stroke-width="1.16667"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <div class="atlas-panel" role="menu">
+                <div class="atlas-panel__grid">
+                  <a class="atlas-panel__item" href="./#how" role="menuitem">
+                    <p class="atlas-panel__title">Capture to Figma</p>
+                    <p class="atlas-panel__desc">Paste live pages as editable layers</p>
+                  </a>
+                  <a class="atlas-panel__item" href="./#caps" role="menuitem">
+                    <p class="atlas-panel__title">Design system</p>
+                    <p class="atlas-panel__desc">Export Style Reference .md and tokens .json</p>
+                  </a>
+                  <a class="atlas-panel__item atlas-panel__item--wide" href="./#deploy" role="menuitem">
+                    <p class="atlas-panel__title">Web Clone MCP</p>
+                    <p class="atlas-panel__desc">Recreate UI in Cursor without Figma</p>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="atlas-dropdown">
+              <button type="button" class="atlas-trigger" aria-expanded="false" aria-haspopup="true">
+                Resources
+                <svg class="atlas-chevron" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path
+                    d="M3.5 5.25L7 8.75L10.5 5.25"
+                    stroke="currentColor"
+                    stroke-width="1.16667"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <div class="atlas-panel" role="menu">
+                <div class="atlas-panel__grid">
+                  <a class="atlas-panel__item" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer" role="menuitem">
+                    <p class="atlas-panel__title">Docs</p>
+                    <p class="atlas-panel__desc">Install and capture workflows</p>
+                  </a>
+                  <a class="atlas-panel__item atlas-panel__item--wide" href="./about.html" role="menuitem">
+                    <p class="atlas-panel__title">About</p>
+                    <p class="atlas-panel__desc">Built for designers and builders</p>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <a class="atlas-link" href="./about.html">About</a>
+          </div>
+
+          <div class="atlas-actions">
+            <a class="atlas-cta" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">
+              <img src="./public/deploy/icon-github-white.svg" alt="" width="14" height="14" />
+              GitHub
+            </a>
+          </div>
+
+          <button
+            type="button"
+            class="atlas-burger"
+            aria-label="Open menu"
+            aria-expanded="false"
+            aria-controls="atlas-mobile-sheet"
+            data-atlas-burger
+          >
+            <svg class="atlas-burger__icon atlas-burger__icon--open" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path
+                d="M3 5.25h12M3 9h12M3 12.75h12"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg class="atlas-burger__icon atlas-burger__icon--close" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path
+                d="M5 5l8 8M13 5l-8 8"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="atlas-hero" aria-labelledby="atlas-hero-title">
+        <div class="atlas-hero__inner">
+          <div class="atlas-hero__copy" data-atlas-reveal>
+            <h1 class="atlas-hero__title" id="atlas-hero-title">
+              Paste any webpage into Figma<br />
+              <span class="atlas-hero__title-muted">as editable layers</span>
+            </h1>
+            <p class="atlas-hero__lede">
+              Capture a live page or element from Chrome, then paste layered content straight into
+              Figma Desktop.
+            </p>
+            <div class="atlas-hero__actions">
+              <a class="atlas-btn atlas-btn--primary" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">
+                <img src="./public/deploy/icon-github-white.svg" alt="" width="16" height="16" />
+                GitHub
+              </a>
+              <a class="atlas-btn atlas-btn--ghost" href="#how">See how it works</a>
+            </div>
+          </div>
+
+          <div class="atlas-hero__stage-wrap" data-atlas-reveal style="--atlas-reveal-delay: 140ms">
+            <div class="atlas-hero__stage">
+              <img
+                class="atlas-hero__stage-bg"
+                src="./public/hero-canvas.png"
+                alt="Send2Figma product stage showing the capture dock on a webpage canvas"
+                width="2044"
+                height="1082"
+              />
+
+              <div class="s2f-stage" data-s2f-mock>
+                <nav class="s2f-dock" aria-label="Send2Figma dock">
+                  <div class="s2f-dock__tools">
+                    <button type="button" class="s2f-dock__item is-active" data-tool="preset" title="Presets" aria-label="Presets" data-reicon="monitor"></button>
+                    <button type="button" class="s2f-dock__item" data-tool="custom" title="Custom width" aria-label="Custom width" data-reicon="edit"></button>
+                    <button type="button" class="s2f-dock__item" data-tool="select" title="Select element" aria-label="Select element" data-reicon="select"></button>
+                    <button type="button" class="s2f-dock__item" data-tool="design" title="Design system" aria-label="Design system" data-reicon="layers"></button>
+                    <button type="button" class="s2f-dock__item" data-tool="screenshot" title="Take screenshot" aria-label="Take screenshot" data-reicon="camera"></button>
+                  </div>
+                </nav>
+
+                <div class="s2f-stage__panels">
+                  <article class="s2f-panel" data-s2f-panel>
+                    <header class="s2f-panel__head">
+                      <div class="s2f-panel__brand">
+                        <span class="s2f-panel__mark" data-s2f-icon data-reicon="monitor" aria-hidden="true"></span>
+                        <div>
+                          <p class="s2f-panel__title" data-s2f-title>Presets</p>
+                          <p class="s2f-panel__sub" data-s2f-sub>Device width capture</p>
+                        </div>
+                      </div>
+                      <div class="s2f-panel__controls">
+                        <button type="button" class="s2f-panel__icon" tabindex="-1" aria-hidden="true" data-reicon="minus"></button>
+                        <button type="button" class="s2f-panel__icon" tabindex="-1" aria-hidden="true" data-reicon="close"></button>
+                      </div>
+                    </header>
+
+                    <div class="s2f-panel__body">
+                      <!-- Presets -->
+                      <div class="s2f-tool is-active" data-tool-view="preset">
+                        <p class="s2f-lead">Capture at a device preset width.</p>
+                        <label class="s2f-switch-row">
+                          <span class="s2f-switch" data-s2f-multi aria-checked="false" role="switch" tabindex="0">
+                            <span class="s2f-switch__thumb"></span>
+                          </span>
+                          <span>Capture multiple sizes</span>
+                        </label>
+                        <div class="s2f-field" data-s2f-single-device>
+                          <span class="s2f-field__label">Device</span>
+                          <span class="s2f-select">Desktop <em>1440px</em></span>
+                        </div>
+                        <div class="s2f-multi-list" data-s2f-multi-list hidden>
+                          <label class="s2f-check"><span class="s2f-check__box"></span>iPhone (375px)</label>
+                          <label class="s2f-check"><span class="s2f-check__box"></span>Android (360px)</label>
+                          <label class="s2f-check"><span class="s2f-check__box"></span>iPad (768px)</label>
+                          <label class="s2f-check"><span class="s2f-check__box is-on"></span>Desktop (1440px)</label>
+                        </div>
+                      </div>
+
+                      <!-- Custom -->
+                      <div class="s2f-tool" data-tool-view="custom" hidden>
+                        <p class="s2f-lead">Capture at a custom viewport width.</p>
+                        <label class="s2f-field">
+                          <span class="s2f-field__label">Width (px)</span>
+                          <input class="s2f-input" type="number" value="1200" readonly tabindex="-1" />
+                        </label>
+                      </div>
+
+                      <!-- Select -->
+                      <div class="s2f-tool" data-tool-view="select" hidden>
+                        <p class="s2f-lead">Pick one element — it copies to the clipboard automatically, then paste into Figma.</p>
+                        <button type="button" class="s2f-btn-lime" tabindex="-1">Select an element</button>
+                        <div class="s2f-preview-box">
+                          <p class="s2f-preview-box__label">Selected element</p>
+                          <p class="s2f-preview-box__value">None</p>
+                        </div>
+                      </div>
+
+                      <!-- Design system -->
+                      <div class="s2f-tool" data-tool-view="design" hidden>
+                        <p class="s2f-lead">Extract tokens from this page. Export .md for AI, or .json for the Figma plugin.</p>
+                        <button type="button" class="s2f-btn-lime" tabindex="-1">Extract from page</button>
+                        <div class="s2f-empty-box">
+                          No tokens yet. Extract from this page — no Figma capture needed.
+                        </div>
+                      </div>
+
+                      <!-- Screenshot -->
+                      <div class="s2f-tool" data-tool-view="screenshot" hidden>
+                        <p class="s2f-lead">Save a PNG of the page — like DevTools Capture screenshot.</p>
+                        <div class="s2f-shot-actions">
+                          <button type="button" class="s2f-btn-lime" tabindex="-1">Visible area</button>
+                          <button type="button" class="s2f-btn-outline" tabindex="-1">Full page</button>
+                          <button type="button" class="s2f-btn-outline" tabindex="-1">Custom region</button>
+                        </div>
+                        <p class="s2f-meta">Downloads to your computer. Dock hides while capturing.</p>
+                      </div>
+
+                      <!-- Capture options (preset + custom only) -->
+                      <div class="s2f-capture" data-s2f-capture>
+                        <div class="s2f-field">
+                          <span class="s2f-field__label">Fidelity</span>
+                          <div class="s2f-seg" role="presentation">
+                            <span class="s2f-seg__btn is-active">Editable</span>
+                            <span class="s2f-seg__btn">Exact</span>
+                          </div>
+                        </div>
+                        <label class="s2f-switch-row">
+                          <span class="s2f-switch is-on" aria-checked="true" role="switch">
+                            <span class="s2f-switch__thumb"></span>
+                          </span>
+                          <span>Preview before copy</span>
+                        </label>
+                        <p class="s2f-tip">Editable keeps more layers editable in Figma. Exact matches the look more closely.</p>
+                      </div>
+                    </div>
+
+                    <footer class="s2f-panel__foot" data-s2f-foot>
+                      <button type="button" class="s2f-send" tabindex="-1">Send to Figma</button>
+                    </footer>
+                  </article>
+
+                  <div class="s2f-stage__side" data-s2f-side>
+                    <div data-side-view="capture">
+                      <article class="s2f-report">
+                        <div class="s2f-report__top">
+                          <p class="s2f-report__kicker">Fidelity report</p>
+                          <p class="s2f-report__score">86% <span>editable</span></p>
+                        </div>
+                        <ul class="s2f-report__list">
+                          <li><span class="s2f-pill s2f-pill--ok">Text</span> stays editable</li>
+                          <li><span class="s2f-pill s2f-pill--ok">Frames</span> auto-layout ready</li>
+                          <li><span class="s2f-pill s2f-pill--warn">Effects</span> flattened where needed</li>
+                        </ul>
+                        <p class="s2f-report__hint">Paste in Figma Desktop with Cmd/Ctrl+V</p>
+                      </article>
+                      <article class="s2f-ready">
+                        <div class="s2f-ready__row">
+                          <span class="s2f-ready__dot"></span>
+                          <div>
+                            <p class="s2f-ready__title">Capture ready</p>
+                            <p class="s2f-ready__meta">checkout.example · Desktop 1440</p>
+                          </div>
+                        </div>
+                        <button type="button" class="s2f-ready__btn" tabindex="-1">Copy to clipboard</button>
+                      </article>
+                    </div>
+
+                    <div data-side-view="select" hidden>
+                      <article class="s2f-report">
+                        <p class="s2f-report__kicker">How Select works</p>
+                        <p class="s2f-side-copy">Hover the page, click one node, and Send2Figma packs it as editable layers — then Cmd/Ctrl+V in Figma.</p>
+                      </article>
+                    </div>
+
+                    <div data-side-view="design" hidden>
+                      <article class="s2f-report">
+                        <p class="s2f-report__kicker">After extract</p>
+                        <p class="s2f-side-copy">You’ll get colors, fonts, components, and CSS variables — export .md for AI agents or .json for the Figma plugin.</p>
+                        <ul class="s2f-report__list" style="margin-top:12px">
+                          <li><span class="s2f-pill s2f-pill--ok">.md</span> AI-ready tokens</li>
+                          <li><span class="s2f-pill s2f-pill--ok">.json</span> Figma plugin</li>
+                        </ul>
+                      </article>
+                    </div>
+
+                    <div data-side-view="screenshot" hidden>
+                      <article class="s2f-report">
+                        <p class="s2f-report__kicker">PNG capture</p>
+                        <p class="s2f-side-copy">Visible area, full page, or draw a custom region. The dock hides while capturing so it never appears in the shot.</p>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="atlas-logos" aria-label="Integrations" data-atlas-reveal>
+        <p class="atlas-logos__label">Works with the tools you already use</p>
+        <div class="atlas-logos__track-wrap" data-atlas-marquee>
+          <div class="atlas-logos__track">
+            <div class="atlas-logo"><span>Figma</span></div>
+            <div class="atlas-logo"><span>Chrome</span></div>
+            <div class="atlas-logo"><span>Cursor</span></div>
+            <div class="atlas-logo"><span>Next.js</span></div>
+            <div class="atlas-logo"><span>React</span></div>
+            <div class="atlas-logo"><span>Tokens</span></div>
+            <div class="atlas-logo"><span>MCP</span></div>
+            <div class="atlas-logo"><span>Desktop</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>Figma</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>Chrome</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>Cursor</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>Next.js</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>React</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>Tokens</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>MCP</span></div>
+            <div class="atlas-logo" aria-hidden="true"><span>Desktop</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="atlas-how" id="how" aria-labelledby="atlas-how-title" data-atlas-reveal data-atlas-stagger>
+        <div class="atlas-how__inner">
+          <div class="atlas-how__copy" data-node-id="30:297" data-atlas-reveal-item>
+            <span class="atlas-pill">How it works</span>
+            <h2 class="atlas-how__title" id="atlas-how-title">
+              From live Chrome to editable Figma in three steps.
+            </h2>
+            <p class="atlas-how__lede">
+              Capture the viewport or a single element, pick Editable or Exact fidelity, then paste
+              into Figma Desktop as layers you can restyle — or export tokens and clone via MCP.
+            </p>
+            <ul class="atlas-how__list">
+              <li>
+                <span class="atlas-how__check" aria-hidden="true">
+                  <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M10 3L4.5 8.5L2 6"
+                      stroke="#58A2F2"
+                      stroke-width="1.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>Open any http(s) page and launch the Send2Figma dock</span>
+              </li>
+              <li>
+                <span class="atlas-how__check" aria-hidden="true">
+                  <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M10 3L4.5 8.5L2 6"
+                      stroke="#58A2F2"
+                      stroke-width="1.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>Capture with presets, custom width, or element select</span>
+              </li>
+              <li>
+                <span class="atlas-how__check" aria-hidden="true">
+                  <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M10 3L4.5 8.5L2 6"
+                      stroke="#58A2F2"
+                      stroke-width="1.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>Paste in Figma Desktop — or export tokens / clone via MCP</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="atlas-how__visual" data-node-id="19:40627" data-atlas-reveal-item style="--atlas-reveal-delay: 120ms">
+            <div class="atlas-trace">
+              <img class="atlas-trace__canvas" src="./public/how/canvas.png" alt="Capture progress demo on a blue canvas" />
+              <div class="how-mock" data-how-progress aria-label="Capture progress demo">
+                <article class="how-mock__panel">
+                  <header class="how-mock__head">
+                    <div class="how-mock__brand">
+                      <span class="how-mock__mark" data-reicon="monitor" aria-hidden="true"></span>
+                      <div>
+                        <p class="how-mock__title">Presets</p>
+                        <p class="how-mock__sub">Device width capture</p>
+                      </div>
+                    </div>
+                    <p class="how-mock__live">
+                      <span class="how-mock__live-dot" aria-hidden="true"></span>
+                      <span data-how-live>capturing</span>
+                    </p>
+                  </header>
+
+                  <div class="how-mock__body">
+                    <label class="how-mock__switch-row">
+                      <span class="how-mock__switch" aria-hidden="true">
+                        <span class="how-mock__switch-thumb"></span>
+                      </span>
+                      <span>Capture multiple sizes</span>
+                    </label>
+
+                    <div class="how-mock__select">
+                      <span>Desktop (1440px)</span>
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </div>
+
+                    <div class="how-mock__progress">
+                      <div class="how-mock__bar" aria-hidden="true">
+                        <div class="how-mock__fill" data-how-fill style="width: 8%"></div>
+                      </div>
+                      <p class="how-mock__rotator" data-how-rotator>Starting…</p>
+                      <p class="how-mock__pct" data-how-pct>Processing: 8% — Starting…</p>
+                    </div>
+                  </div>
+
+                  <footer class="how-mock__foot">
+                    <button type="button" class="how-mock__send is-busy" tabindex="-1" disabled>
+                      Send to Figma
+                    </button>
+                  </footer>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="atlas-caps" id="caps" aria-labelledby="atlas-caps-title" data-node-id="30:415" data-atlas-reveal data-atlas-stagger>
+        <div class="atlas-caps__inner">
+          <header class="atlas-caps__header" data-atlas-reveal-item>
+            <span class="atlas-pill atlas-pill--caps">Capabilities</span>
+            <h2 class="atlas-caps__title" id="atlas-caps-title">
+              Everything you need to capture,<br />
+              tokenize, and recreate.
+            </h2>
+            <p class="atlas-caps__lede">
+              From honest fidelity modes to AI-ready Style Reference and Cursor MCP — one extension,
+              two output paths.
+            </p>
+          </header>
+
+          <div class="atlas-caps__grid">
+            <article class="cap-card cap-card--wide" data-atlas-reveal-item style="--atlas-reveal-delay: 80ms">
+              <div class="cap-card__stage">
+                <img class="cap-card__canvas" src="./public/caps/canvas-reason.png" alt="Editable Figma layers panel demo" />
+                <div class="cap-card__stage-inner cap-card__stage-inner--layers">
+                  <div class="cap-layers" data-cap-layers aria-label="Figma layers panel demo">
+                    <div class="cap-layers__row is-selected" style="--depth: 0; --i: 0">
+                      <span class="cap-layers__chev" data-reicon="chevron-down" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-h" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Homepage</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                    <div class="cap-layers__row" style="--depth: 1; --i: 1">
+                      <span class="cap-layers__chev" data-reicon="chevron-down" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-h" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Body</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                    <div class="cap-layers__row" style="--depth: 2; --i: 2">
+                      <span class="cap-layers__chev" data-reicon="chevron-down" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-h" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Container</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                    <div class="cap-layers__row" style="--depth: 3; --i: 3">
+                      <span class="cap-layers__chev" data-reicon="chevron-right" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-h" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Header</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                    <div class="cap-layers__row" style="--depth: 3; --i: 4">
+                      <span class="cap-layers__chev" data-reicon="chevron-right" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-h" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Main Content</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                    <div class="cap-layers__row" style="--depth: 3; --i: 5">
+                      <span class="cap-layers__chev" data-reicon="chevron-right" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-h" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Footer</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                    <div class="cap-layers__row" style="--depth: 3; --i: 6">
+                      <span class="cap-layers__chev" data-reicon="chevron-right" aria-hidden="true"></span>
+                      <span class="cap-layers__type" data-reicon="layout-v" aria-hidden="true"></span>
+                      <span class="cap-layers__name">Container</span>
+                      <span class="cap-layers__actions">
+                        <span data-reicon="lock" aria-hidden="true"></span>
+                        <span data-reicon="eye" aria-hidden="true"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap-card__copy">
+                <h3 class="cap-card__title">Watch layers stay editable</h3>
+                <p class="cap-card__desc">
+                  Editable mode keeps text and frames tweakable in Figma — not a flat PNG paste.
+                </p>
+              </div>
+            </article>
+
+            <article class="cap-card" data-atlas-reveal-item style="--atlas-reveal-delay: 140ms">
+              <div class="cap-card__stage">
+                <img class="cap-card__canvas" src="./public/caps/canvas-tools.png" alt="Exact fidelity mode controls demo" />
+                <div class="cap-card__stage-inner cap-card__stage-inner--exact">
+                  <article class="cap-exact" data-cap-exact aria-label="Exact fidelity demo">
+                    <div class="cap-exact__field">
+                      <span class="cap-exact__label">Fidelity</span>
+                      <div class="cap-exact__seg" role="presentation">
+                        <span class="cap-exact__seg-btn is-active" data-exact-mode="editable">Editable</span>
+                        <span class="cap-exact__seg-btn" data-exact-mode="exact">Exact</span>
+                      </div>
+                    </div>
+                    <p class="cap-exact__tip" data-exact-tip>
+                      Exact matches the look more closely — hard effects become images.
+                    </p>
+                    <ul class="cap-exact__list">
+                      <li style="--i: 0">
+                        <span class="cap-exact__name">Filters</span>
+                        <span class="cap-exact__pill">Rasterized</span>
+                      </li>
+                      <li style="--i: 1">
+                        <span class="cap-exact__name">Shadows</span>
+                        <span class="cap-exact__pill">Flattened</span>
+                      </li>
+                      <li style="--i: 2">
+                        <span class="cap-exact__name">Canvas</span>
+                        <span class="cap-exact__pill">Image</span>
+                      </li>
+                    </ul>
+                  </article>
+                </div>
+              </div>
+              <div class="cap-card__copy">
+                <h3 class="cap-card__title">Add Exact when look matters</h3>
+                <p class="cap-card__desc">
+                  Rasterize hard effects when visual match comes first — filters, shadows, canvas.
+                </p>
+              </div>
+            </article>
+
+            <article class="cap-card cap-card--short" data-atlas-reveal-item style="--atlas-reveal-delay: 180ms">
+              <div class="cap-card__stage cap-card__stage--short">
+                <img class="cap-card__canvas" src="./public/caps/canvas-memory.png" alt="Style Reference token export demo" />
+                <div class="cap-card__stage-inner cap-card__stage-inner--memory">
+                  <div class="cap-memory" data-cap-memory aria-label="Style Reference tokens">
+                    <div class="cap-memory__viewport">
+                      <div class="cap-memory__track">
+                        <div class="cap-memory__set">
+                          <div class="cap-memory__row">
+                            <span class="cap-memory__icon" aria-hidden="true"></span>
+                            Colors → STYLE.md
+                          </div>
+                          <div class="cap-memory__row">
+                            <span class="cap-memory__icon" aria-hidden="true"></span>
+                            Type → AI-ready tokens
+                          </div>
+                          <div class="cap-memory__row">
+                            <span class="cap-memory__icon" aria-hidden="true"></span>
+                            Components → tokens.json
+                          </div>
+                        </div>
+                        <div class="cap-memory__set" aria-hidden="true">
+                          <div class="cap-memory__row">
+                            <span class="cap-memory__icon" aria-hidden="true"></span>
+                            Colors → STYLE.md
+                          </div>
+                          <div class="cap-memory__row">
+                            <span class="cap-memory__icon" aria-hidden="true"></span>
+                            Type → AI-ready tokens
+                          </div>
+                          <div class="cap-memory__row">
+                            <span class="cap-memory__icon" aria-hidden="true"></span>
+                            Components → tokens.json
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap-card__copy">
+                <h3 class="cap-card__title">Export a Style Reference</h3>
+                <p class="cap-card__desc">
+                  Colors, type, and components as .md for AI and .json for the Figma tokens plugin.
+                </p>
+              </div>
+            </article>
+
+            <article class="cap-card cap-card--short" data-node-id="19:41665" data-atlas-reveal-item style="--atlas-reveal-delay: 220ms">
+              <div class="cap-card__stage cap-card__stage--short">
+                <img class="cap-card__canvas" src="./public/caps/canvas-output.png" alt="Structured specs.json output demo" />
+                <div class="cap-card__stage-inner cap-card__stage-inner--output">
+                  <div class="cap-json" data-cap-json aria-label="Structured specs demo">
+                    <div class="cap-json__head">
+                      <span class="cap-json__file">
+                        <img src="./public/caps/icon-braces.svg" alt="JSON braces" width="12" height="12" role="presentation" />
+                        <span>specs.json</span>
+                      </span>
+                      <span class="cap-json__schema">
+                        <img src="./public/caps/icon-schema-check.svg" alt="Schema check" width="10" height="10" role="presentation" />
+                        schema
+                      </span>
+                    </div>
+                    <div class="cap-json__code" aria-hidden="true">
+                      <div class="cap-json__line" data-json-line style="--i: 0"><span class="cap-json__pun">&#123;</span></div>
+                      <div class="cap-json__line cap-json__line--pad" data-json-line style="--i: 1">
+                        <span class="cap-json__key">"layoutSpec"</span><span class="cap-json__pun">: </span><span class="cap-json__val">"space.md"</span><span class="cap-json__pun">,</span>
+                      </div>
+                      <div class="cap-json__line cap-json__line--pad" data-json-line style="--i: 2">
+                        <span class="cap-json__key">"typeSpec"</span><span class="cap-json__pun">: </span><span class="cap-json__val">"text.lg"</span><span class="cap-json__pun">,</span>
+                      </div>
+                      <div class="cap-json__line cap-json__line--pad" data-json-line style="--i: 3">
+                        <span class="cap-json__key">"colorSpec"</span><span class="cap-json__pun">: </span><span class="cap-json__val">"ink"</span><span class="cap-json__pun">,</span>
+                      </div>
+                      <div class="cap-json__line cap-json__line--pad" data-json-line style="--i: 4">
+                        <span class="cap-json__key">"aliases"</span><span class="cap-json__pun">: </span><span class="cap-json__val">true</span>
+                      </div>
+                      <div class="cap-json__line" data-json-line style="--i: 5"><span class="cap-json__pun">&#125;</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap-card__copy">
+                <h3 class="cap-card__title">Returns structured specs</h3>
+                <p class="cap-card__desc">
+                  Section layoutSpec / typeSpec / colorSpec for Cursor rebuilds — aliases win on spacing.
+                </p>
+              </div>
+            </article>
+
+            <article class="cap-card cap-card--short" data-atlas-reveal-item style="--atlas-reveal-delay: 260ms">
+              <div class="cap-card__stage cap-card__stage--short">
+                <img class="cap-card__canvas" src="./public/caps/canvas-approval.png" alt="Preview before paste score demo" />
+                <div class="cap-card__stage-inner cap-card__stage-inner--preview">
+                  <article class="cap-preview" data-cap-preview aria-label="Preview before paste demo">
+                    <p class="cap-preview__kicker">Preview</p>
+                    <p class="cap-preview__score">
+                      <span class="cap-preview__num" data-preview-score>0</span>%
+                      <span class="cap-preview__unit">editable</span>
+                    </p>
+                    <p class="cap-preview__meta" data-preview-meta>
+                      <span class="cap-preview__pill">3 rasters</span>
+                      highlighted
+                    </p>
+                    <div class="cap-preview__actions">
+                      <button type="button" class="cap-preview__btn cap-preview__btn--ok" data-preview-btn tabindex="-1">Copy</button>
+                      <button type="button" class="cap-preview__btn cap-preview__btn--ghost" data-preview-btn tabindex="-1">Discard</button>
+                    </div>
+                  </article>
+                </div>
+              </div>
+              <div class="cap-card__copy">
+                <h3 class="cap-card__title">Preview before you paste</h3>
+                <p class="cap-card__desc">See % editable, highlight rasters, then copy — or discard and recapture.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="atlas-stats" aria-labelledby="atlas-stats-title" data-node-id="19:40790" data-atlas-reveal data-atlas-stagger>
+        <div class="atlas-stats__inner">
+          <header class="atlas-stats__header" data-atlas-reveal-item>
+            <span class="atlas-pill">Built for fidelity</span>
+            <h2 class="atlas-stats__title" id="atlas-stats-title">
+              Honest capture. Editable when you need it. Exact when you don’t.
+            </h2>
+          </header>
+
+          <div class="atlas-stats__grid">
+            <div class="atlas-stat" data-atlas-reveal-item style="--atlas-reveal-delay: 80ms">
+              <p class="atlas-stat__value">Layers</p>
+              <p class="atlas-stat__label">Not a flat PNG</p>
+              <p class="atlas-stat__hint">editable Figma paste</p>
+            </div>
+            <div class="atlas-stat" data-atlas-reveal-item style="--atlas-reveal-delay: 140ms">
+              <p class="atlas-stat__value">Exact</p>
+              <p class="atlas-stat__label">When pixels matter</p>
+              <p class="atlas-stat__hint">filters &amp; shadows</p>
+            </div>
+            <div class="atlas-stat" data-atlas-reveal-item style="--atlas-reveal-delay: 200ms">
+              <p class="atlas-stat__value">Tokens</p>
+              <p class="atlas-stat__label">Style Reference</p>
+              <p class="atlas-stat__hint">.md + Figma .json</p>
+            </div>
+            <div class="atlas-stat" data-atlas-reveal-item style="--atlas-reveal-delay: 260ms">
+              <p class="atlas-stat__value">MCP</p>
+              <p class="atlas-stat__label">Clone in Cursor</p>
+              <p class="atlas-stat__hint">Next · React · HTML</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="atlas-customers" aria-labelledby="atlas-customers-title" data-node-id="19:41060" data-atlas-reveal>
+        <header class="atlas-customers__header">
+          <span class="atlas-pill">Teams</span>
+          <h2 class="atlas-customers__title" id="atlas-customers-title">
+            Competitor audits without<br />
+            starting from a blank frame.
+          </h2>
+          <p class="atlas-customers__lede">
+            Designers and builders use Send2Figma to restyle live sites in Figma and recreate
+            sections in Cursor.
+          </p>
+        </header>
+
+        <div class="atlas-customers__marquee" data-atlas-marquee>
+          <div class="atlas-customers__row">
+            <div class="atlas-customers__track">
+              <figure class="atlas-quote">
+                <blockquote class="atlas-quote__text">
+                  “I paste a competitor hero into Figma and restyle it in minutes instead of rebuilding frames by hand.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--maya" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Maya Chen</p>
+                    <p class="atlas-quote__role">Product Designer, Northwind</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote">
+                <blockquote class="atlas-quote__text">
+                  “The MCP Style Reference stops the agent inventing colors. Specs win on spacing.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--diego" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Diego Santos</p>
+                    <p class="atlas-quote__role">Frontend Lead, Relay</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote">
+                <blockquote class="atlas-quote__text">
+                  “Extract tokens from production, apply them in Figma, and keep the source of truth live.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--priya" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Priya Nair</p>
+                    <p class="atlas-quote__role">Design Systems, Cortex</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote" aria-hidden="true">
+                <blockquote class="atlas-quote__text">
+                  “I paste a competitor hero into Figma and restyle it in minutes instead of rebuilding frames by hand.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--maya" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Maya Chen</p>
+                    <p class="atlas-quote__role">Product Designer, Northwind</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote" aria-hidden="true">
+                <blockquote class="atlas-quote__text">
+                  “The MCP Style Reference stops the agent inventing colors. Specs win on spacing.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--diego" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Diego Santos</p>
+                    <p class="atlas-quote__role">Frontend Lead, Relay</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote" aria-hidden="true">
+                <blockquote class="atlas-quote__text">
+                  “Extract tokens from production, apply them in Figma, and keep the source of truth live.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--priya" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Priya Nair</p>
+                    <p class="atlas-quote__role">Design Systems, Cortex</p>
+                  </span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <div class="atlas-customers__row atlas-customers__row--rev">
+            <div class="atlas-customers__track">
+              <figure class="atlas-quote">
+                <blockquote class="atlas-quote__text">
+                  “Preview before copy is underrated — I see % editable, highlight rasters, then paste with confidence.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--theo" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Theo Park</p>
+                    <p class="atlas-quote__role">Design Engineer, Ledger</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote">
+                <blockquote class="atlas-quote__text">
+                  “Device presets plus multi-size capture means one competitor audit covers mobile and desktop.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--lena" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Lena Ortiz</p>
+                    <p class="atlas-quote__role">Product Design Lead, Beacon</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote">
+                <blockquote class="atlas-quote__text">
+                  “I paste a competitor hero into Figma and restyle it in minutes instead of rebuilding frames by hand.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--maya" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Maya Chen</p>
+                    <p class="atlas-quote__role">Product Designer, Northwind</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote" aria-hidden="true">
+                <blockquote class="atlas-quote__text">
+                  “Preview before copy is underrated — I see % editable, highlight rasters, then paste with confidence.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--theo" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Theo Park</p>
+                    <p class="atlas-quote__role">Design Engineer, Ledger</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote" aria-hidden="true">
+                <blockquote class="atlas-quote__text">
+                  “Device presets plus multi-size capture means one competitor audit covers mobile and desktop.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--lena" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Lena Ortiz</p>
+                    <p class="atlas-quote__role">Product Design Lead, Beacon</p>
+                  </span>
+                </figcaption>
+              </figure>
+              <figure class="atlas-quote" aria-hidden="true">
+                <blockquote class="atlas-quote__text">
+                  “I paste a competitor hero into Figma and restyle it in minutes instead of rebuilding frames by hand.”
+                </blockquote>
+                <figcaption class="atlas-quote__person">
+                  <span class="atlas-quote__avatar atlas-quote__avatar--maya" aria-hidden="true"></span>
+                  <span>
+                    <p class="atlas-quote__name">Maya Chen</p>
+                    <p class="atlas-quote__role">Product Designer, Northwind</p>
+                  </span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="atlas-deploy" id="deploy" aria-labelledby="atlas-deploy-title" data-node-id="19:41436" data-atlas-reveal>
+        <div class="atlas-deploy__inner">
+          <span class="atlas-pill">Get started</span>
+          <h2 class="atlas-deploy__title" id="atlas-deploy-title">
+            Install Send2Figma<br />
+            in minutes.
+          </h2>
+          <p class="atlas-deploy__lede">
+            Load the Chrome extension, open any page, capture, and paste into Figma Desktop.
+            Optional: connect Web Clone MCP for Cursor.
+          </p>
+
+          <div class="atlas-term">
+            <div class="atlas-term__bar">
+              <span class="atlas-term__dot atlas-term__dot--red" aria-hidden="true"></span>
+              <span class="atlas-term__dot atlas-term__dot--yellow" aria-hidden="true"></span>
+              <span class="atlas-term__dot atlas-term__dot--green" aria-hidden="true"></span>
+              <span class="atlas-term__path">chrome://extensions</span>
+              <button type="button" class="atlas-term__copy">
+                <img src="./public/deploy/icon-copy.svg" alt="Copy" width="12" height="12" role="presentation" />
+                Copy
+              </button>
+            </div>
+            <div class="atlas-term__body">
+              <p class="atlas-term__cmd">
+                <span class="atlas-term__prompt">$</span>
+                Load unpacked → select the <code>extension/</code> folder
+              </p>
+              <p class="atlas-term__line">
+                <img src="./public/deploy/icon-check.svg" alt="Check" width="14" height="14" role="presentation" />
+                Dock ready · Ctrl+Shift+H
+              </p>
+              <p class="atlas-term__line">
+                <img src="./public/deploy/icon-check.svg" alt="Check" width="14" height="14" role="presentation" />
+                Capture → paste figh2d in Figma Desktop
+              </p>
+              <p class="atlas-term__line">
+                <img src="./public/deploy/icon-check.svg" alt="Check" width="14" height="14" role="presentation" />
+                MCP: enable bridge · copy Cursor config
+              </p>
+            </div>
+          </div>
+
+          <div class="atlas-deploy__actions">
+            <a class="atlas-btn atlas-btn--primary" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">
+              <img src="./public/deploy/icon-github-white.svg" alt="" width="16" height="16" />
+              GitHub
+            </a>
+            <a class="atlas-btn atlas-btn--ghost" href="#">Connect MCP</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="atlas-footer" data-node-id="37:1232">
+      <div class="atlas-footer__inner">
+        <div class="atlas-footer__top">
+          <div class="atlas-footer__brand">
+            <p class="atlas-footer__logo">Send2Figma</p>
+            <p class="atlas-footer__tagline">
+              Capture webpages into editable Figma layers — and optionally recreate them in Cursor.
+            </p>
+            <p class="atlas-footer__status">
+              <span class="atlas-footer__live" aria-hidden="true"></span>
+              Extension ready
+            </p>
+          </div>
+
+          <nav class="atlas-footer__nav" aria-label="Footer">
+            <div class="atlas-footer__col">
+              <p class="atlas-footer__col-title">Product</p>
+              <ul>
+                <li><a href="./#how">Capture to Figma</a></li>
+                <li><a href="./#caps">Design system</a></li>
+                <li><a href="./#deploy">Web Clone MCP</a></li>
+              </ul>
+            </div>
+            <div class="atlas-footer__col">
+              <p class="atlas-footer__col-title">Resources</p>
+              <ul>
+                <li>
+                  <a href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">Docs</a>
+                </li>
+                <li><a href="./terms.html">Terms</a></li>
+                <li><a href="./privacy.html">Privacy</a></li>
+              </ul>
+            </div>
+            <div class="atlas-footer__col">
+              <p class="atlas-footer__col-title">Company</p>
+              <ul>
+                <li><a href="./about.html">About</a></li>
+                <li>
+                  <a href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">Contact</a>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+
+        <div class="atlas-footer__bottom">
+                    <div class="atlas-footer__meta">
+          <p class="atlas-footer__copy">© 2026 Send2Figma. All rights reserved.</p>
+          <div class="atlas-footer__legal">
+            <a href="./terms.html">Terms</a>
+            <a href="./privacy.html">Privacy</a>
+          </div>
+          </div>
+          <div class="atlas-footer__social">
+            <a class="atlas-footer__social-link" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+              <img src="./public/deploy/icon-github.svg" alt="GitHub" width="17" height="17" />
+            </a>
+            <a class="atlas-footer__social-link" href="#" aria-label="X">
+              <img src="./public/deploy/icon-x.svg" alt="X" width="17" height="17" />
+            </a>
+            <a class="atlas-footer__social-link" href="#" aria-label="LinkedIn">
+              <img src="./public/deploy/icon-linkedin.svg" alt="LinkedIn" width="17" height="17" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <div
+      class="atlas-mobile"
+      id="atlas-mobile-sheet"
+      hidden
+      data-atlas-mobile
+    >
+      <div class="atlas-mobile__sheet" role="dialog" aria-modal="true" aria-label="Menu">
+        <div class="atlas-mobile__body">
+          <div class="atlas-mobile__acc" data-atlas-acc>
+            <button
+              type="button"
+              class="atlas-mobile__acc-btn"
+              aria-expanded="false"
+              data-atlas-acc-btn
+            >
+              Product
+              <svg class="atlas-chevron" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path
+                  d="M3.5 5.25L7 8.75L10.5 5.25"
+                  stroke="currentColor"
+                  stroke-width="1.16667"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <div class="atlas-mobile__acc-panel" hidden data-atlas-acc-panel>
+              <a class="atlas-mobile__item" href="#">
+                <span class="atlas-mobile__item-title">Capture to Figma</span>
+                <span class="atlas-mobile__item-desc">Paste live pages as editable layers</span>
+              </a>
+              <a class="atlas-mobile__item" href="#">
+                <span class="atlas-mobile__item-title">Design system</span>
+                <span class="atlas-mobile__item-desc">Export Style Reference .md and tokens .json</span>
+              </a>
+              <a class="atlas-mobile__item" href="#">
+                <span class="atlas-mobile__item-title">Web Clone MCP</span>
+                <span class="atlas-mobile__item-desc">Recreate UI in Cursor without Figma</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="atlas-mobile__acc" data-atlas-acc>
+            <button
+              type="button"
+              class="atlas-mobile__acc-btn"
+              aria-expanded="false"
+              data-atlas-acc-btn
+            >
+              Resources
+              <svg class="atlas-chevron" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path
+                  d="M3.5 5.25L7 8.75L10.5 5.25"
+                  stroke="currentColor"
+                  stroke-width="1.16667"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <div class="atlas-mobile__acc-panel" hidden data-atlas-acc-panel>
+              <a class="atlas-mobile__item" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">
+                <span class="atlas-mobile__item-title">Docs</span>
+                <span class="atlas-mobile__item-desc">Install and capture workflows</span>
+              </a>
+              <a class="atlas-mobile__item" href="./about.html">
+                <span class="atlas-mobile__item-title">About</span>
+                <span class="atlas-mobile__item-desc">Built for designers and builders</span>
+              </a>
+            </div>
+          </div>
+          <a class="atlas-mobile__link" href="./about.html">About</a>
+        </div>
+
+        <div class="atlas-mobile__actions">
+          <a class="atlas-mobile__cta" href="https://github.com/sukirman1901/send2figma" target="_blank" rel="noopener noreferrer">
+            <img src="./public/deploy/icon-github-white.svg" alt="" width="16" height="16" />
+            GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var icons = globalThis.__htfyReicons || {};
+        document.querySelectorAll("[data-reicon]").forEach(function (el) {
+          var svg = icons[el.getAttribute("data-reicon")];
+          if (svg) el.insertAdjacentHTML("beforeend", svg);
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-s2f-mock]");
+        if (!root) return;
+
+        var TOOLS = {
+          preset: { title: "Presets", sub: "Device width capture", icon: "monitor", side: "capture", capture: true },
+          custom: { title: "Custom", sub: "Custom viewport width", icon: "edit", side: "capture", capture: true },
+          select: { title: "Select", sub: "Capture one element", icon: "select", side: "select", capture: false },
+          design: { title: "Design system", sub: "Export .md + .json", icon: "layers", side: "design", capture: false },
+          screenshot: { title: "Screenshot", sub: "Save PNG of the page", icon: "camera", side: "screenshot", capture: false },
+        };
+
+        var ORDER = ["preset", "custom", "select", "design", "screenshot"];
+        var INTERVAL_MS = 3600;
+        var PAUSE_AFTER_CLICK_MS = 7000;
+        var FADE_MS = 320;
+
+        var titleEl = root.querySelector("[data-s2f-title]");
+        var subEl = root.querySelector("[data-s2f-sub]");
+        var iconEl = root.querySelector("[data-s2f-icon]");
+        var captureEl = root.querySelector("[data-s2f-capture]");
+        var footEl = root.querySelector("[data-s2f-foot]");
+        var multiToggle = root.querySelector("[data-s2f-multi]");
+        var multiList = root.querySelector("[data-s2f-multi-list]");
+        var singleDevice = root.querySelector("[data-s2f-single-device]");
+
+        var index = 0;
+        var current = ORDER[0];
+        var timer = null;
+        var fadeTimer = null;
+        var pauseUntil = 0;
+        var hovering = false;
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        function setIcon(el, name) {
+          if (!el) return;
+          el.setAttribute("data-reicon", name);
+          el.innerHTML = (globalThis.__htfyReicons && globalThis.__htfyReicons[name]) || "";
+        }
+
+        function applyTool(tool) {
+          var meta = TOOLS[tool] || TOOLS.preset;
+          current = tool;
+          if (titleEl) titleEl.textContent = meta.title;
+          if (subEl) subEl.textContent = meta.sub;
+          setIcon(iconEl, meta.icon);
+
+          root.querySelectorAll("[data-tool-view]").forEach(function (view) {
+            var on = view.getAttribute("data-tool-view") === tool;
+            view.hidden = !on;
+            view.classList.toggle("is-active", on);
+          });
+
+          root.querySelectorAll(".s2f-dock__item[data-tool]").forEach(function (btn) {
+            btn.classList.toggle("is-active", btn.getAttribute("data-tool") === tool);
+          });
+
+          if (captureEl) captureEl.hidden = !meta.capture;
+          if (footEl) footEl.hidden = !meta.capture;
+
+          root.querySelectorAll("[data-side-view]").forEach(function (side) {
+            side.hidden = side.getAttribute("data-side-view") !== meta.side;
+          });
+        }
+
+        function setTool(tool, fromUser) {
+          if (!TOOLS[tool]) tool = "preset";
+          var nextIndex = ORDER.indexOf(tool);
+          if (nextIndex >= 0) index = nextIndex;
+
+          if (fromUser) pauseUntil = Date.now() + PAUSE_AFTER_CLICK_MS;
+
+          if (tool === current && !fromUser) return;
+
+          window.clearTimeout(fadeTimer);
+
+          if (reduceMotion) {
+            applyTool(tool);
+            root.classList.add("is-ready");
+            root.classList.remove("is-switching");
+            return;
+          }
+
+          root.classList.remove("is-ready");
+          root.classList.add("is-switching");
+
+          fadeTimer = window.setTimeout(function () {
+            applyTool(tool);
+            // next frame so browser paints hidden state before fade-in
+            requestAnimationFrame(function () {
+              root.classList.remove("is-switching");
+              root.classList.add("is-ready");
+            });
+          }, FADE_MS);
+        }
+
+        function nextTool() {
+          if (hovering || Date.now() < pauseUntil) return;
+          index = (index + 1) % ORDER.length;
+          setTool(ORDER[index], false);
+        }
+
+        function startAutoplay() {
+          window.clearInterval(timer);
+          if (reduceMotion) return;
+          timer = window.setInterval(nextTool, INTERVAL_MS);
+        }
+
+        root.querySelectorAll(".s2f-dock__item[data-tool]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            setTool(btn.getAttribute("data-tool"), true);
+          });
+        });
+
+        root.addEventListener("mouseenter", function () {
+          hovering = true;
+        });
+        root.addEventListener("mouseleave", function () {
+          hovering = false;
+        });
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) {
+            window.clearInterval(timer);
+            timer = null;
+          } else {
+            startAutoplay();
+          }
+        });
+
+        if ("IntersectionObserver" in window && !reduceMotion) {
+          var heroIo = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (entry.isIntersecting) startAutoplay();
+                else {
+                  window.clearInterval(timer);
+                  timer = null;
+                }
+              });
+            },
+            { threshold: 0.2 }
+          );
+          heroIo.observe(root);
+        }
+
+        if (multiToggle) {
+          multiToggle.addEventListener("click", function () {
+            var on = !multiToggle.classList.contains("is-on");
+            multiToggle.classList.toggle("is-on", on);
+            multiToggle.setAttribute("aria-checked", on ? "true" : "false");
+            if (multiList) multiList.hidden = !on;
+            if (singleDevice) singleDevice.hidden = on;
+            pauseUntil = Date.now() + PAUSE_AFTER_CLICK_MS;
+          });
+        }
+
+        root.querySelectorAll(".s2f-seg").forEach(function (seg) {
+          seg.querySelectorAll(".s2f-seg__btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              seg.querySelectorAll(".s2f-seg__btn").forEach(function (b) {
+                b.classList.remove("is-active");
+              });
+              btn.classList.add("is-active");
+              pauseUntil = Date.now() + PAUSE_AFTER_CLICK_MS;
+            });
+          });
+        });
+
+        applyTool("preset");
+        root.classList.add("is-ready");
+        startAutoplay();
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-how-progress]");
+        if (!root) return;
+
+        var fill = root.querySelector("[data-how-fill]");
+        var rotator = root.querySelector("[data-how-rotator]");
+        var pctEl = root.querySelector("[data-how-pct]");
+        var sendBtn = root.querySelector(".how-mock__send");
+        var liveLabel = root.querySelector("[data-how-live]");
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // Same stage labels / percentages as ui/panel.js capture progress map
+        var STAGES = [
+          { pct: 8, text: "Starting…" },
+          { pct: 20, text: "Preparing page…" },
+          { pct: 28, text: "Resolving CSS…" },
+          { pct: 40, text: "Materializing…" },
+          { pct: 50, text: "Capturing…" },
+          { pct: 70, text: "Enriching…" },
+          { pct: 85, text: "Refining assets…" },
+          { pct: 100, text: "Copied! Paste into Figma Desktop (Cmd/Ctrl+V)." },
+        ];
+
+        var STEP_MS = 1000;
+        var HOLD_DONE_MS = 2400;
+        var RESET_MS = 700;
+        var index = 0;
+        var timer = null;
+        var running = false;
+        var visible = false;
+
+        function setLive(label) {
+          if (liveLabel) liveLabel.textContent = label;
+        }
+
+        function applyStage(stage, done) {
+          if (fill) fill.style.width = stage.pct + "%";
+          if (pctEl) pctEl.textContent = "Processing: " + stage.pct + "% — " + stage.text;
+
+          if (rotator) {
+            if (reduceMotion) {
+              rotator.textContent = stage.text;
+            } else {
+              rotator.classList.add("is-swap");
+              window.setTimeout(function () {
+                rotator.textContent = stage.text;
+                rotator.classList.remove("is-swap");
+              }, 160);
+            }
+          }
+
+          if (sendBtn) {
+            sendBtn.classList.toggle("is-busy", !done);
+            sendBtn.classList.toggle("is-done", !!done);
+            sendBtn.textContent = done ? "Copied — paste in Figma" : "Send to Figma";
+          }
+          setLive(done ? "done" : "capturing");
+        }
+
+        function clearTimer() {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+        }
+
+        function schedule(fn, ms) {
+          clearTimer();
+          timer = window.setTimeout(fn, ms);
+        }
+
+        function runLoop() {
+          if (!visible || document.hidden) {
+            running = false;
+            return;
+          }
+          running = true;
+
+          if (reduceMotion) {
+            applyStage(STAGES[3], false);
+            return;
+          }
+
+          var stage = STAGES[index];
+          var done = index === STAGES.length - 1;
+          applyStage(stage, done);
+
+          if (done) {
+            schedule(function () {
+              index = 0;
+              if (fill) fill.style.width = "0%";
+              if (sendBtn) {
+                sendBtn.classList.remove("is-done");
+                sendBtn.classList.add("is-busy");
+                sendBtn.textContent = "Send to Figma";
+              }
+              setLive("capturing");
+              schedule(runLoop, RESET_MS);
+            }, HOLD_DONE_MS);
+            return;
+          }
+
+          index += 1;
+          schedule(runLoop, STEP_MS);
+        }
+
+        function start() {
+          if (running) return;
+          root.classList.remove("is-paused");
+          index = 0;
+          runLoop();
+        }
+
+        function stop() {
+          running = false;
+          root.classList.add("is-paused");
+          clearTimer();
+        }
+
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                visible = entry.isIntersecting && entry.intersectionRatio > 0.25;
+                if (visible) start();
+                else stop();
+              });
+            },
+            { threshold: [0, 0.25, 0.5] }
+          );
+          io.observe(root);
+        } else {
+          visible = true;
+          start();
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) stop();
+          else if (visible) start();
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-cap-layers]");
+        if (!root) return;
+
+        var rows = Array.prototype.slice.call(root.querySelectorAll(".cap-layers__row"));
+        if (!rows.length) return;
+
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // Walk the tree: root → body → container → main content → back
+        var PATH = [0, 1, 2, 4, 0];
+        var STEP_MS = 1200;
+        var LOOP_PAUSE_MS = 1800;
+        var pathIndex = 0;
+        var timer = null;
+        var running = false;
+        var visible = false;
+        var entered = false;
+
+        function selectRow(index) {
+          rows.forEach(function (row, i) {
+            var on = i === index;
+            row.classList.toggle("is-selected", on);
+            if (on) {
+              // retrigger pulse
+              row.style.animation = "none";
+              void row.offsetWidth;
+              row.style.animation = "";
+            }
+          });
+        }
+
+        function clearTimer() {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+        }
+
+        function schedule(fn, ms) {
+          clearTimer();
+          timer = window.setTimeout(fn, ms);
+        }
+
+        function tick() {
+          if (!visible || document.hidden || reduceMotion) {
+            running = false;
+            return;
+          }
+          running = true;
+          selectRow(PATH[pathIndex]);
+          var atEnd = pathIndex === PATH.length - 1;
+          pathIndex = (pathIndex + 1) % PATH.length;
+          schedule(tick, atEnd ? LOOP_PAUSE_MS : STEP_MS);
+        }
+
+        function start() {
+          if (!entered) {
+            entered = true;
+            root.classList.add("is-ready");
+          }
+          if (reduceMotion) {
+            selectRow(0);
+            return;
+          }
+          if (running) return;
+          pathIndex = 0;
+          // let stagger settle before selection walk
+          schedule(tick, 520);
+        }
+
+        function stop() {
+          running = false;
+          clearTimer();
+        }
+
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                visible = entry.isIntersecting && entry.intersectionRatio > 0.3;
+                if (visible) start();
+                else stop();
+              });
+            },
+            { threshold: [0, 0.3, 0.6] }
+          );
+          io.observe(root);
+        } else {
+          visible = true;
+          start();
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) stop();
+          else if (visible) start();
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-cap-preview]");
+        if (!root) return;
+
+        var scoreEl = root.querySelector("[data-preview-score]");
+        var copyBtn = root.querySelector(".cap-preview__btn--ok");
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var TARGET = 86;
+        var timer = null;
+        var raf = null;
+        var running = false;
+        var visible = false;
+
+        function clearTimer() {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+          if (raf) {
+            window.cancelAnimationFrame(raf);
+            raf = null;
+          }
+        }
+
+        function schedule(fn, ms) {
+          clearTimer();
+          timer = window.setTimeout(fn, ms);
+        }
+
+        function setScore(n) {
+          if (scoreEl) scoreEl.textContent = String(Math.round(n));
+        }
+
+        function countUp(done) {
+          var start = performance.now();
+          var dur = 1100;
+
+          function frame(now) {
+            var t = Math.min(1, (now - start) / dur);
+            var eased = 1 - Math.pow(1 - t, 3);
+            setScore(TARGET * eased);
+            if (t < 1) {
+              raf = window.requestAnimationFrame(frame);
+              return;
+            }
+            setScore(TARGET);
+            if (done) done();
+          }
+
+          raf = window.requestAnimationFrame(frame);
+        }
+
+        function runLoop() {
+          if (!visible || document.hidden) {
+            running = false;
+            return;
+          }
+          running = true;
+
+          root.classList.remove("is-ready");
+          if (copyBtn) copyBtn.classList.remove("is-pulse");
+          setScore(0);
+
+          if (reduceMotion) {
+            setScore(TARGET);
+            root.classList.add("is-ready");
+            return;
+          }
+
+          countUp(function () {
+            root.classList.add("is-ready");
+            schedule(function () {
+              if (copyBtn) copyBtn.classList.add("is-pulse");
+              schedule(function () {
+                schedule(runLoop, 700);
+              }, 1600);
+            }, 450);
+          });
+        }
+
+        function start() {
+          if (running) return;
+          runLoop();
+        }
+
+        function stop() {
+          running = false;
+          clearTimer();
+        }
+
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                visible = entry.isIntersecting && entry.intersectionRatio > 0.3;
+                if (visible) start();
+                else stop();
+              });
+            },
+            { threshold: [0, 0.3, 0.6] }
+          );
+          io.observe(root);
+        } else {
+          visible = true;
+          start();
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) stop();
+          else if (visible) start();
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-cap-json]");
+        if (!root) return;
+
+        var lines = Array.prototype.slice.call(root.querySelectorAll("[data-json-line]"));
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var LINE_MS = 300;
+        var HOLD_MS = 2200;
+        var RESET_MS = 600;
+        var timer = null;
+        var running = false;
+        var visible = false;
+        var index = 0;
+
+        function clearTimer() {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+        }
+
+        function schedule(fn, ms) {
+          clearTimer();
+          timer = window.setTimeout(fn, ms);
+        }
+
+        function resetLines() {
+          root.classList.remove("is-typing", "is-complete");
+          lines.forEach(function (line) {
+            line.classList.remove("is-on");
+          });
+          index = 0;
+        }
+
+        function tick() {
+          if (!visible || document.hidden) {
+            running = false;
+            return;
+          }
+          running = true;
+
+          if (reduceMotion) {
+            root.classList.add("is-complete");
+            lines.forEach(function (line) {
+              line.classList.add("is-on");
+            });
+            return;
+          }
+
+          root.classList.add("is-typing");
+          root.classList.remove("is-complete");
+
+          if (index < lines.length) {
+            lines[index].classList.add("is-on");
+            index += 1;
+            schedule(tick, LINE_MS);
+            return;
+          }
+
+          root.classList.add("is-complete");
+          schedule(function () {
+            resetLines();
+            schedule(tick, RESET_MS);
+          }, HOLD_MS);
+        }
+
+        function start() {
+          if (running) return;
+          resetLines();
+          schedule(tick, 280);
+        }
+
+        function stop() {
+          running = false;
+          clearTimer();
+        }
+
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                visible = entry.isIntersecting && entry.intersectionRatio > 0.3;
+                if (visible) start();
+                else stop();
+              });
+            },
+            { threshold: [0, 0.3, 0.6] }
+          );
+          io.observe(root);
+        } else {
+          visible = true;
+          start();
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) stop();
+          else if (visible) start();
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-cap-exact]");
+        if (!root) return;
+
+        var btns = root.querySelectorAll("[data-exact-mode]");
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var timer = null;
+        var running = false;
+        var visible = false;
+
+        function clearTimer() {
+          if (timer) {
+            window.clearTimeout(timer);
+            timer = null;
+          }
+        }
+
+        function schedule(fn, ms) {
+          clearTimer();
+          timer = window.setTimeout(fn, ms);
+        }
+
+        function setMode(mode) {
+          var exact = mode === "exact";
+          root.classList.toggle("is-exact", exact);
+          btns.forEach(function (btn) {
+            btn.classList.toggle("is-active", btn.getAttribute("data-exact-mode") === mode);
+          });
+        }
+
+        function runLoop() {
+          if (!visible || document.hidden) {
+            running = false;
+            return;
+          }
+          running = true;
+
+          if (reduceMotion) {
+            setMode("exact");
+            return;
+          }
+
+          // Start Editable (list hidden)
+          setMode("editable");
+          schedule(function () {
+            // Flip to Exact → tip + cascade via CSS
+            setMode("exact");
+            schedule(function () {
+              // Hold, then loop
+              schedule(runLoop, 900);
+            }, 2200);
+          }, 900);
+        }
+
+        function start() {
+          if (running) return;
+          runLoop();
+        }
+
+        function stop() {
+          running = false;
+          clearTimer();
+        }
+
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                visible = entry.isIntersecting && entry.intersectionRatio > 0.3;
+                if (visible) start();
+                else stop();
+              });
+            },
+            { threshold: [0, 0.3, 0.6] }
+          );
+          io.observe(root);
+        } else {
+          visible = true;
+          start();
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) stop();
+          else if (visible) start();
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-cap-memory]");
+        if (!root) return;
+
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduceMotion) {
+          root.classList.add("is-paused");
+          return;
+        }
+
+        function setPaused(paused) {
+          root.classList.toggle("is-paused", paused);
+        }
+
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                var on = entry.isIntersecting && entry.intersectionRatio > 0.25;
+                setPaused(!on || document.hidden);
+              });
+            },
+            { threshold: [0, 0.25, 0.5] }
+          );
+          io.observe(root);
+        }
+
+        document.addEventListener("visibilitychange", function () {
+          setPaused(document.hidden);
+        });
+      })();
+    </script>
+    <script src="./js/nav.js"></script>
+    <script src="./js/motion.js"></script>
+  </body>
+</html>

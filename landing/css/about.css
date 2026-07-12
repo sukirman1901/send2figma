@@ -1,0 +1,199 @@
+/* About page — matches landing tokens & type */
+
+.about-page {
+  padding: 32px 32px 96px;
+  color: var(--atlas-cream);
+}
+
+.about-page__inner {
+  width: min(768px, 100%);
+  margin: 0 auto;
+}
+
+.about-hero {
+  text-align: center;
+  padding: 48px 0 64px;
+}
+
+.about-hero__eyebrow {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--atlas-muted);
+}
+
+.about-hero__title {
+  margin: 0;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -1.2px;
+  color: var(--atlas-cream);
+}
+
+.about-hero__title-muted {
+  color: rgba(145, 139, 134, 0.55);
+}
+
+.about-hero__lede {
+  margin: 20px auto 0;
+  max-width: 560px;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 28px;
+  color: var(--atlas-muted);
+}
+
+.about-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 32px;
+}
+
+.about-block {
+  padding: 48px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.about-block__title {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--atlas-cream);
+  font-variation-settings: "SOFT" 0, "WONK" 1;
+}
+
+.about-block__body {
+  margin: 16px 0 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 28px;
+  color: var(--atlas-muted);
+}
+
+.about-block__body + .about-block__body {
+  margin-top: 12px;
+}
+
+.about-principles {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.about-principles__item {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.about-principles__item:last-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.about-principles__num {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--atlas-blue);
+}
+
+.about-principles__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: var(--atlas-cream);
+}
+
+.about-principles__desc {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 24px;
+  color: var(--atlas-muted);
+}
+
+.about-cta {
+  margin-top: 16px;
+  padding: 40px 32px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--atlas-surface);
+  text-align: center;
+}
+
+.about-cta__title {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--atlas-cream);
+  font-variation-settings: "SOFT" 0, "WONK" 1;
+}
+
+.about-cta__lede {
+  margin: 12px auto 0;
+  max-width: 420px;
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--atlas-muted);
+}
+
+.about-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.atlas-link[aria-current="page"] {
+  color: var(--atlas-cream);
+}
+
+@media (max-width: 720px) {
+  .about-page {
+    padding: 16px 20px 72px;
+  }
+
+  .about-hero {
+    padding: 32px 0 48px;
+  }
+
+  .about-hero__title {
+    font-size: 32px;
+    letter-spacing: -0.8px;
+  }
+
+  .about-block {
+    padding: 36px 0;
+  }
+
+  .about-block__title {
+    font-size: 26px;
+  }
+
+  .about-cta {
+    padding: 32px 20px;
+  }
+
+  .about-cta__title {
+    font-size: 24px;
+  }
+}
