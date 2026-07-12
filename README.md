@@ -4,14 +4,13 @@ Chrome extension that captures a live webpage (or a selected element) and pastes
 
 ## Repo folders
 
-After you download/clone, you’ll see four main folders:
+After you download/clone, you’ll see these folders:
 
 | Folder | What it is | Do you need it? |
 |--------|------------|-----------------|
 | **`extension/`** | The Chrome extension (Load unpacked here) | **Yes — start here** |
 | **`figma-plugin/`** | Optional Figma plugin for design tokens | Only if you export `.json` tokens |
 | **`mcp/`** | Optional Cursor MCP (inspect tab / clone UI) | Only if you use Cursor MCP |
-| **`examples/`** | Demo / landing previews | No — reference only |
 
 ## Install the Chrome extension (beginner path)
 
@@ -94,7 +93,6 @@ send2figma/
 │   └── src/
 ├── figma-plugin/       ← Optional Figma design-token plugin
 ├── mcp/                ← Optional Cursor MCP server
-├── examples/           ← Demos / previews (not required to install)
 └── tests/              ← Node regression checks
 ```
 
