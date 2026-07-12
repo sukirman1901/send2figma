@@ -7,8 +7,13 @@ Local MCP server so **Cursor** can inspect a live Chrome tab and rebuild UI in N
 | Layer | Promise |
 |-------|---------|
 | Screenshot | Pixel-accurate capture of what Chrome painted |
+| **designSystem** | Agent-ready brand: typography, colors, buttons, hover |
+| **specs v2** (`layoutSpec` / `typeSpec` / `colorSpec` / `aliases`) | Section measures — win over page tokens on conflict |
 | Styles / rules / box model | Best-effort DevTools-equivalent snapshot |
-| Generated code | Agent responsibility — high fidelity, not guaranteed 100% |
+| Generated code | Follow designSystem + specs; screenshot for QA |
+
+`bundle_for_recreate` returns `version: 3` with `designSystem`, `specs`, and a strict `agentPrompt`. Skill: `.cursor/skills/web-clone-from-mcp/` (Spec→Plan→Build→Verify→Review→Ship).
+
 
 ## Setup
 
@@ -48,12 +53,12 @@ npm run build
 - `ping` — health + extension bridge
 - `list_tabs` — http(s) tabs
 - `list_sections` — header/nav/main/card candidates
-- `inspect_section` — HTML + matched CSS + computed + box model
+- `inspect_section` — HTML + CSS + **specs** (layout/type/color aliases)
 - `get_interaction_css` — `:hover`/`:focus` rules (+ optional hover shot)
 - `capture_screenshot` — visible / fullPage / node
 - `export_images` — img + background assets
-- `extract_tokens` — design tokens
-- `bundle_for_recreate` — **primary** one-shot pack for agents
+- `extract_tokens` — **designSystem** (type/color/buttons/hover) + raw tokens
+- `bundle_for_recreate` — **primary** pack: designSystem + specs + screenshot + strict agentPrompt
 
 Screenshots/assets are written under `~/.send2figma-mcp/cache/` (override with `S2F_MCP_CACHE`).
 

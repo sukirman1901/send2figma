@@ -22,3 +22,13 @@ export async function writeBase64File(
   await writeFile(path, Buffer.from(base64, "base64"));
   return path;
 }
+
+export async function writeTextFile(
+  dir: string,
+  filename: string,
+  text: string
+): Promise<string> {
+  const path = join(dir, filename);
+  await writeFile(path, text, "utf8");
+  return path;
+}

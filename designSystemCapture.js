@@ -3,7 +3,7 @@
  * SuperDev-inspired: full color sweep, font grouping, CSS variable harvest.
  */
 (() => {
-  if (window.__htfyDesignSystemCapture) return;
+  if (window.__htfyDesignSystemCapture?.version >= 3) return;
 
   const COLOR_RE =
     /(?:rgba?|hsla?|lab|lch|oklab|oklch|color)\([^)]+\)|#[0-9a-fA-F]{3,8}\b/g;
@@ -74,6 +74,19 @@
         .toString(16)
         .padStart(2, "0");
     return `#${to(m[1])}${to(m[2])}${to(m[3])}`;
+  }
+
+
+  function isOpaqueFill(bg) {
+    if (!bg || bg === "transparent" || bg === "rgba(0, 0, 0, 0)") return false;
+    if (/gradient/i.test(bg)) return true;
+    const m = String(bg).match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?/i);
+    if (!m) return !!toHex(resolveToRgb(bg));
+    return m[4] === undefined || Number(m[4]) > 0.15;
+  }
+
+  function labelOf(el) {
+    return (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 48);
   }
 
   function hslSortKey(rgb) {
@@ -201,6 +214,124 @@
       if (el.closest?.("#htfyRoot, [id^='__htfy'], [data-htfy-chrome='1']")) return true;
     } catch (_) {}
     return false;
+  }
+
+
+  function extractControlVariants(root) {
+    const buttons = [];
+    const links = [];
+    const seenBtn = new Set();
+    const seenLink = new Set();
+    const candidates = root.querySelectorAll(
+      'button, [role="button"], a, input[type="submit"], input[type="button"]'
+    );
+
+    const scoreButton = (el, contract) => {
+      let score = 0;
+      const h = parseFloat(contract.height) || 0;
+      const w = parseFloat(String(contract.width)) || 0;
+      const r = parseFloat(contract.borderRadius) || 0;
+      if (contract.text && contract.text.length >= 2) score += 60;
+      if (h >= 28 && h <= 48) score += 30;
+      if (w >= 70) score += 25;
+      if (w < 40 && (r >= 40 || contract.borderRadius === "50%")) score -= 120; // icon chips
+      try {
+        if (el.closest("header, [role='banner'], nav")) score += 45;
+        if (el.closest("footer, [role='contentinfo']")) score -= 15;
+      } catch (_) {}
+      const cls = (contract.className || "").toLowerCase();
+      if (/hero|tab|submit|connecticon|social|hamburger/.test(cls)) score -= 35;
+      if (/button|btn|cta|teal|black|primary/.test(cls)) score += 15;
+      return score;
+    };
+
+    const labelFontSize = (el, fallback) => {
+      try {
+        const label = el.querySelector("p, span, .label, [class*='label']");
+        if (label) {
+          const fs = getComputedStyle(label).fontSize;
+          if (fs && fs !== "13.3333px") return fs;
+        }
+      } catch (_) {}
+      return fallback;
+    };
+
+    for (const el of candidates) {
+      if (isExtensionChrome(el) || !isVisible(el)) continue;
+      let s;
+      try {
+        s = getComputedStyle(el);
+      } catch {
+        continue;
+      }
+      const r = el.getBoundingClientRect();
+      if (r.width < 20 || r.height < 16) continue;
+
+      const bg = s.backgroundColor;
+      const rgb = resolveToRgb(bg);
+      const hex = rgb ? toHex(rgb) : null;
+      const tag = el.tagName.toLowerCase();
+      const text = labelOf(el);
+      const contract = {
+        tag,
+        text: text || null,
+        backgroundColor: bg,
+        backgroundColorHex: hex,
+        color: s.color,
+        colorHex: toHex(resolveToRgb(s.color) || "") || null,
+        height: s.height,
+        width: `${Math.round(r.width)}px`,
+        borderRadius: s.borderTopLeftRadius,
+        fontFamily: s.fontFamily?.split(",")[0]?.replace(/['"]/g, "").trim() || null,
+        fontSize: labelFontSize(el, s.fontSize),
+        fontWeight: s.fontWeight,
+        lineHeight: s.lineHeight,
+        padding: `${s.paddingTop} ${s.paddingRight} ${s.paddingBottom} ${s.paddingLeft}`,
+        gap: s.gap !== "normal" ? s.gap : null,
+        boxShadow: s.boxShadow !== "none" ? s.boxShadow : null,
+        border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`,
+        className: classSignature(el),
+        inChrome: !!(el.closest?.("header, [role='banner'], nav")),
+      };
+
+      if ((tag === "button" || el.getAttribute("role") === "button" || tag === "input") && isOpaqueFill(bg)) {
+        const key = `${hex}|${s.height}|${s.borderTopLeftRadius}|${Math.round(r.width)}`;
+        if (!seenBtn.has(key)) {
+          seenBtn.add(key);
+          buttons.push({ ...contract, _score: scoreButton(el, contract) });
+        }
+      } else if (tag === "a" && text && !isOpaqueFill(bg)) {
+        const key = `${contract.colorHex}|${s.fontSize}|${s.fontWeight}`;
+        if (!seenLink.has(key) && links.length < 8) {
+          seenLink.add(key);
+          links.push({ ...contract, role: "navLink" });
+        }
+      } else if (tag === "a" && isOpaqueFill(bg) && text) {
+        const key = `a-${hex}|${s.height}|${Math.round(r.width)}`;
+        if (!seenBtn.has(key)) {
+          seenBtn.add(key);
+          buttons.push({ ...contract, _score: scoreButton(el, contract) });
+        }
+      }
+    }
+
+    // Prefer header/nav CTAs; drop low-score icon noise
+    const ranked = buttons
+      .filter((b) => (b._score || 0) > 0)
+      .sort((a, b) => (b._score || 0) - (a._score || 0));
+
+    const chromeFirst = ranked.filter((b) => b.inChrome);
+    const pick = (chromeFirst.length >= 2 ? chromeFirst : ranked).slice(0, 6);
+
+    const named = pick.map((b, i) => {
+      const { _score, inChrome, ...rest } = b;
+      let role = `variant-${i + 1}`;
+      if (i === 0) role = "primary";
+      else if (i === 1) role = "secondary";
+      return { ...rest, role, score: _score };
+    });
+
+    return { buttons: named, links: links.slice(0, 6) };
   }
 
   function extractDesignSystem(root) {
@@ -414,6 +545,8 @@
       compIdx++;
     }
 
+    const controls = extractControlVariants(root);
+
     return {
       colors: colorList,
       fonts: fontFamilies.map((f) => ({ value: f.family, count: f.count, token: `font/${slug(f.family)}` })),
@@ -439,8 +572,10 @@
       shadows: topEntries(shadows, 6).map((t, i) => ({ ...t, token: `shadow/${i + 1}` })),
       cssVariables: harvestCssVariables(),
       components: repeated,
+      buttons: controls.buttons,
+      links: controls.links,
     };
   }
 
-  window.__htfyDesignSystemCapture = { extractDesignSystem };
+  window.__htfyDesignSystemCapture = { version: 3, extractDesignSystem };
 })();
