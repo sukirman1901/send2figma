@@ -245,6 +245,121 @@
     return String(el.className || "");
   }
 
+  // Accessibility data capture
+  function captureAccessibility(el) {
+    const ariaAttrs = {};
+    for (const attr of el.attributes) {
+      if (attr.name.startsWith('aria-') || attr.name === 'role') {
+        ariaAttrs[attr.name] = attr.value;
+      }
+    }
+    
+    return {
+      role: el.getAttribute('role') || null,
+      ariaLabel: el.getAttribute('aria-label') || null,
+      ariaLabelledby: el.getAttribute('aria-labelledby') || null,
+      ariaDescribedby: el.getAttribute('aria-describedby') || null,
+      ariaHidden: el.getAttribute('aria-hidden') || null,
+      ariaExpanded: el.getAttribute('aria-expanded') || null,
+      ariaSelected: el.getAttribute('aria-selected') || null,
+      ariaChecked: el.getAttribute('aria-checked') || null,
+      ariaDisabled: el.getAttribute('aria-disabled') || null,
+      ariaRequired: el.getAttribute('aria-required') || null,
+      ariaInvalid: el.getAttribute('aria-invalid') || null,
+      ariaLive: el.getAttribute('aria-live') || null,
+      ariaAtomic: el.getAttribute('aria-atomic') || null,
+      ariaRelevant: el.getAttribute('aria-relevant') || null,
+      tabIndex: el.tabIndex !== -1 ? el.tabIndex : null,
+      tabindex: el.getAttribute('tabindex') || null,
+      isInteractive: ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) || el.getAttribute('role') === 'button',
+      isFocusable: el.tabIndex >= 0 || ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName),
+      allAriaAttrs: Object.keys(ariaAttrs).length > 0 ? ariaAttrs : null,
+    };
+  }
+
+  // Transitions & animations capture
+  function captureTransitions(style) {
+    const transitions = style.transition || style.transitionProperty;
+    const animations = style.animation || style.animationName;
+    
+    return {
+      transition: transitions && transitions !== 'none' ? transitions : null,
+      transitionDuration: style.transitionDuration !== '0s' ? style.transitionDuration : null,
+      transitionTimingFunction: style.transitionTimingFunction !== 'ease' ? style.transitionTimingFunction : null,
+      transitionDelay: style.transitionDelay !== '0s' ? style.transitionDelay : null,
+      animation: animations && animations !== 'none' ? animations : null,
+      animationDuration: style.animationDuration !== '0s' ? style.animationDuration : null,
+      animationTimingFunction: style.animationTimingFunction !== 'ease' ? style.animationTimingFunction : null,
+      animationIterationCount: style.animationIterationCount !== '1' ? style.animationIterationCount : null,
+      animationDirection: style.animationDirection !== 'normal' ? style.animationDirection : null,
+      animationFillMode: style.animationFillMode !== 'none' ? style.animationFillMode : null,
+      animationDelay: style.animationDelay !== '0s' ? style.animationDelay : null,
+    };
+  }
+
+  // React component detection
+  function detectReactComponents(el) {
+    const fiberKey = Object.keys(el).find(k => 
+      k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')
+    );
+    if (!fiberKey) return null;
+    
+    const fiber = el[fiberKey];
+    const components = [];
+    let current = fiber;
+    
+    while (current && components.length < 10) {
+      if (current.type && typeof current.type === 'function') {
+        const name = current.type.name || current.type.displayName || 'Anonymous';
+        if (!components.includes(name)) {
+          components.unshift(name);
+        }
+      }
+      current = current.return;
+    }
+    
+    return components.length > 0 ? components : null;
+  }
+
+  // Box model capture
+  function captureBoxModel(el) {
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    
+    return {
+      content: {
+        width: rect.width,
+        height: rect.height,
+      },
+      padding: {
+        top: parseFloat(style.paddingTop),
+        right: parseFloat(style.paddingRight),
+        bottom: parseFloat(style.paddingBottom),
+        left: parseFloat(style.paddingLeft),
+      },
+      border: {
+        top: parseFloat(style.borderTopWidth),
+        right: parseFloat(style.borderRightWidth),
+        bottom: parseFloat(style.borderBottomWidth),
+        left: parseFloat(style.borderLeftWidth),
+      },
+      margin: {
+        top: parseFloat(style.marginTop),
+        right: parseFloat(style.marginRight),
+        bottom: parseFloat(style.marginBottom),
+        left: parseFloat(style.marginLeft),
+      },
+      totalWidth: rect.width + 
+        parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) +
+        parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth) +
+        parseFloat(style.marginLeft) + parseFloat(style.marginRight),
+      totalHeight: rect.height + 
+        parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) +
+        parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) +
+        parseFloat(style.marginTop) + parseFloat(style.marginBottom),
+    };
+  }
+
   // New helper functions for design system detection
   
   function detectSpacingScale(root) {
@@ -644,6 +759,9 @@
         tag: el.tagName.toLowerCase(),
         selector: selector || (el === root ? "(root)" : cssPath(el)),
         text: (el.innerText || "").trim().slice(0, 80) || null,
+        accessibility: captureAccessibility(el),
+        transitions: captureTransitions(style),
+        reactComponents: detectReactComponents(el),
       };
       roles.push(entry);
 
@@ -701,7 +819,7 @@
     const colorPalette = detectColorPalette(root);
 
     return {
-      version: 3, // Bump version for new features
+      version: 4, // Bump version for new features
       layoutSpec,
       typeSpec,
       colorSpec,
@@ -720,6 +838,10 @@
         "Use spacingScale for consistent spacing (4px/8px/16px patterns).",
         "Use typeScale for typography hierarchy (headings, body, captions).",
         "Use colorPalette for brand colors (primary, secondary, accent, neutral).",
+        "Use accessibility data for ARIA attributes and interactive elements.",
+        "Use transitions/animations for motion design.",
+        "Use reactComponents for component hierarchy.",
+        "Use boxModel for precise spacing and sizing.",
       ],
     };
   }
@@ -805,7 +927,7 @@
       html: sanitizeHtml(root),
       computed: filterComputed(rootStyle),
       matchedRules: [],
-      boxModel: null,
+      boxModel: captureBoxModel(root),
     };
 
     const children = prioritized
@@ -816,14 +938,16 @@
         role,
         computed: filterComputed(getComputedStyle(el)),
         matchedRules: [],
-        boxModel: null,
+        boxModel: captureBoxModel(el),
       }));
 
-    const fidelityNotes = ["matched_rules_pending_cdp", "agent_specs_v3"];
+    const fidelityNotes = ["matched_rules_pending_cdp", "agent_specs_v4", "accessibility_data", "transitions_captured", "box_model_captured"];
     if (!specs.aliases.ctaPrimaryBg) fidelityNotes.push("cta_primary_color_missing");
     if (!specs.aliases.ctaSecondaryBg) fidelityNotes.push("cta_secondary_color_missing");
     if (specs.designSystem?.spacingScale?.pattern === "custom") fidelityNotes.push("custom_spacing_scale");
     if (specs.designSystem?.typeScale?.scaleType === "custom") fidelityNotes.push("custom_type_scale");
+    const hasReact = roles.some(r => r.reactComponents && r.reactComponents.length > 0);
+    if (hasReact) fidelityNotes.push("react_detected");
 
     return {
       url: location.href,
@@ -837,7 +961,7 @@
   }
 
   window.__htfyMcpInspect = {
-    version: 3,
+    version: 4,
     inspectDom,
     collectInteractionRules: (selector) => {
       const root = document.querySelector(selector);
@@ -857,5 +981,9 @@
     filterComputed,
     cssPath,
     buildAgentSpecs,
+    captureAccessibility,
+    captureTransitions,
+    detectReactComponents,
+    captureBoxModel,
   };
 })();
