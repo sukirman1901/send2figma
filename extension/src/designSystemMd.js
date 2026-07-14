@@ -396,9 +396,16 @@ export function formatCompactStyleReference(exp) {
   push("");
   push(`| Role | Size | Token |`);
   push(`|------|------|-------|`);
+  const usedTableRoles = [];
   fontSizes.forEach((s, i) => {
     const px = parsePx(s.value);
-    const role = typeRole(px, i, fontSizes.length);
+    let role = typeRole(px, i, fontSizes.length);
+    let counter = 2;
+    while (usedTableRoles.includes(role)) {
+      role = `${role.replace(/-\d+$/, "")}-${counter}`;
+      counter++;
+    }
+    usedTableRoles.push(role);
     push(`| ${role} | ${s.value} | \`--text-${role}\` |`);
   });
   if (!fontSizes.length) push(`| body | 16px | \`--text-body\` |`);
@@ -459,8 +466,10 @@ export function formatCompactStyleReference(exp) {
       push("");
       const bg = b.backgroundColorHex || b.background || "—";
       const fg = b.colorHex || b.foreground || b.color || "—";
+      const radiusRaw = b.borderRadius || b.radius || "—";
+      const radiusVal = typeof radiusRaw === "number" ? (radiusRaw > 999 ? "pill" : `${radiusRaw}px`) : radiusRaw;
       push(
-        `Fill \`${bg}\`, text \`${fg}\`, height ${b.height || "—"}, radius ${b.borderRadius || b.radius || "—"}, type ${b.fontSize || "—"} / weight ${b.fontWeight || "—"}, padding \`${b.padding || "—"}\`${b.text ? `. Sample label: “${b.text}”` : ""}.`
+        `Fill \`${bg}\`, text \`${fg}\`, height ${b.height || "—"}, radius ${radiusVal}, type ${b.fontSize || "—"} / weight ${b.fontWeight || "—"}, padding \`${b.padding || "—"}\`${b.text ? `. Sample label: \u201c${b.text}\u201d` : ""}.`
       );
       push("");
     });
@@ -585,14 +594,15 @@ export function formatCompactStyleReference(exp) {
       `  --font-secondary: '${secondaryFont}', ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;`
     );
   }
+  const usedTextRoles = [];
   fontSizes.forEach((s, i) => {
     let role = typeRole(parsePx(s.value), i, fontSizes.length);
-    const usedRoles = fontSizes.slice(0, i).map((prev, j) => typeRole(parsePx(prev.value), j, fontSizes.length));
     let counter = 2;
-    while (usedRoles.includes(role)) {
+    while (usedTextRoles.includes(role)) {
       role = `${role.replace(/-\d+$/, "")}-${counter}`;
       counter++;
     }
+    usedTextRoles.push(role);
     push(`  --text-${role}: ${s.value};`);
   });
   for (const w of fontWeights.slice(0, 4)) {
