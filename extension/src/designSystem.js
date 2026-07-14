@@ -5,6 +5,16 @@
 import { formatDesignSystemMarkdown, formatCompactStyleReference } from "./designSystemMd.js";
 
 /**
+ * Escape special YAML characters in a string value.
+ * @param {string} s
+ * @returns {string}
+ */
+function yamlEscape(s) {
+  if (!s) return "";
+  return String(s).replace(/['":]/g, "\\$&").trim();
+}
+
+/**
  * Detect page type from URL patterns and DOM heuristics.
  * @param {{ url: string, title: string, host: string, description: string, articleCount: number, formCount: number, navCount: number, headingCount: number }} meta
  * @returns {{ type: string, confidence: number, label: string }}
@@ -70,7 +80,7 @@ export function wcagSummary(pairs) {
     if (p.ratio < 3) {
       recommendations.push(`Critical: "${p.text}" (${p.fg} on ${p.bg}) has ratio ${p.ratio}:1 — needs 4.5:1 minimum`);
     } else {
-      recommendations.push(`Low: "${p.text}" (${p.fg} on ${p.bg}) has ratio ${p.ratio}:1 — increase contrast to 4.5:1`);
+      recommendations.push(`Moderate: "${p.text}" (${p.fg} on ${p.bg}) has ratio ${p.ratio}:1 — increase contrast to 4.5:1`);
     }
   }
   return { pass, fail, total: pairs.length, pairs: failingPairs, recommendations };
@@ -170,8 +180,8 @@ export function buildSkillMd(exp) {
   const push = (...xs) => lines.push(...xs);
 
   push("---");
-  push(`name: ${brand.name || exp?.source || "site"}-design-skill`);
-  push(`description: Design system rules for ${brand.name || "the target site"}`);
+  push(`name: ${yamlEscape(brand.name || exp?.source || "site")}-design-skill`);
+  push(`description: Design system rules for ${yamlEscape(brand.name || "the target site")}`);
   push(`version: 1`);
   push(`source: ${exp?.source || "Send2Figma"}`);
   push(`url: ${exp?.pageMeta?.url || ""}`);
