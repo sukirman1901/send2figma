@@ -268,12 +268,15 @@ export function buildDesignSystemExport(data) {
 export function toDesignSystemJsonPayload(exp) {
   if (!exp) return null;
   return {
-    version: exp.version ?? 3,
+    version: exp.version ?? 4,
     source: exp.source,
     exportedAt: exp.exportedAt,
     tokens: exp.tokens || {},
     components: exp.components || [],
     treeSummary: exp.treeSummary ?? null,
+    contrastPairs: exp.contrastPairs || [],
+    breakpoints: exp.breakpoints || [],
+    pageMeta: exp.pageMeta ?? null,
   };
 }
 

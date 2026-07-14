@@ -1295,12 +1295,15 @@
       }
       const { markdown: _md, format: _fmt, ...rest } = lastDesignSystem;
       const payload = {
-        version: rest.version ?? 3,
+        version: rest.version ?? 4,
         source: rest.source,
         exportedAt: rest.exportedAt,
         tokens: rest.tokens || {},
         components: rest.components || [],
         treeSummary: rest.treeSummary ?? null,
+        contrastPairs: rest.contrastPairs || [],
+        breakpoints: rest.breakpoints || [],
+        pageMeta: rest.pageMeta ?? null,
       };
       downloadBlob(
         `${designSystemSlug()}-designsystem.json`,
