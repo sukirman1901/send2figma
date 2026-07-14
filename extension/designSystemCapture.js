@@ -3,7 +3,7 @@
  * SuperDev-inspired: full color sweep, font grouping, CSS variable harvest.
  */
 (() => {
-  if (window.__htfyDesignSystemCapture?.version >= 3) return;
+  if (window.__htfyDesignSystemCapture?.version >= 4) return;
 
   const COLOR_RE =
     /(?:rgba?|hsla?|lab|lch|oklab|oklch|color)\([^)]+\)|#[0-9a-fA-F]{3,8}\b/g;
@@ -334,6 +334,38 @@
     return { buttons: named, links: links.slice(0, 6) };
   }
 
+  function findEffectiveBg(el) {
+    let node = el;
+    while (node && node.nodeType === 1) {
+      try {
+        const s = getComputedStyle(node);
+        const bg = resolveToRgb(s.backgroundColor);
+        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "rgb(0, 0, 0)") return bg;
+      } catch (_) {}
+      node = node.parentElement;
+    }
+    return resolveToRgb("rgb(255, 255, 255)");
+  }
+
+  function contrastRatio(hex1, hex2) {
+    const l1 = lumForContrast(hex1);
+    const l2 = lumForContrast(hex2);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function lumForContrast(hex) {
+    if (!hex || hex[0] !== "#") return 0.5;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const sR = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+    const sG = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+    const sB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+    return 0.2126 * sR + 0.7152 * sG + 0.0722 * sB;
+  }
+
   function extractDesignSystem(root) {
     const colors = new Map();
     const fonts = new Map(); // family -> { count, sizes:Map, weights:Map, tags:Map }
@@ -345,6 +377,7 @@
     const spaces = new Map();
     const shadows = new Map();
     const components = new Map();
+    const contrastPairs = [];
 
     const els = [root, ...root.querySelectorAll("*")].filter(
       (n) => n.nodeType === 1 && !isExtensionChrome(n)
@@ -376,6 +409,27 @@
         for (const key of ["color", "backgroundColor", "borderTopColor", "outlineColor", "fill", "stroke"]) {
           const rgb = resolveToRgb(s[key]);
           if (rgb) colors.set(rgb, (colors.get(rgb) || 0) + 1);
+        }
+      }
+
+      // Contrast pair capture for WCAG checking
+      if (hasText(el) && isVisible(el)) {
+        const fg = resolveToRgb(s.color);
+        const bg = resolveToRgb(s.backgroundColor) || findEffectiveBg(el);
+        if (fg && bg && fg !== bg) {
+          const fgHex = toHex(fg);
+          const bgHex = toHex(bg);
+          if (fgHex && bgHex) {
+            const ratio = contrastRatio(fgHex, bgHex);
+            contrastPairs.push({
+              fg: fgHex,
+              bg: bgHex,
+              ratio: Math.round(ratio * 100) / 100,
+              pass: ratio >= 4.5,
+              text: labelOf(el).slice(0, 32),
+              tag: el.tagName.toLowerCase(),
+            });
+          }
         }
       }
 
@@ -480,6 +534,69 @@
       components.set(sig, entry);
     }
 
+    // Deduplicate contrast pairs by fg+bg combo
+    const seenPairs = new Set();
+    const uniquePairs = contrastPairs.filter((p) => {
+      const key = `${p.fg}|${p.bg}`;
+      if (seenPairs.has(key)) return false;
+      seenPairs.add(key);
+      return true;
+    }).slice(0, 30);
+
+    // Breakpoint extraction from media queries
+    const breakpoints = [];
+    try {
+      for (const sheet of document.styleSheets) {
+        let rules;
+        try { rules = sheet.cssRules; } catch { continue; }
+        if (!rules) continue;
+        for (const rule of rules) {
+          if (rule.type === CSSRule.MEDIA_RULE) {
+            const mql = rule.conditionText || "";
+            const pxMatch = mql.match(/(?:min|max)-width:\s*(\d+(?:\.\d+)?)px/);
+            if (pxMatch) {
+              const px = parseFloat(pxMatch[1]);
+              if (px > 0 && px < 3000 && !breakpoints.includes(px)) {
+                breakpoints.push(px);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    breakpoints.sort((a, b) => a - b);
+
+    // Page metadata for profiling
+    const pageMeta = {
+      title: document.title || "",
+      url: location.href,
+      host: location.hostname,
+      description: document.querySelector('meta[name="description"]')?.content || "",
+      canonical: document.querySelector('link[rel="canonical"]')?.href || "",
+      ogType: document.querySelector('meta[property="og:type"]')?.content || "",
+      articleCount: document.querySelectorAll("article, [role='article']").length,
+      formCount: document.querySelectorAll("form").length,
+      navCount: document.querySelectorAll("nav, [role='navigation']").length,
+      headingCount: document.querySelectorAll("h1,h2,h3,h4,h5,h6").length,
+      imageCount: document.querySelectorAll("img, svg, picture").length,
+      textSamples: [],
+    };
+
+    // Text samples for tone inference
+    const textEls = document.querySelectorAll("h1,h2,h3,p,blockquote,.hero,.headline");
+    for (const el of textEls) {
+      if (pageMeta.textSamples.length >= 20) break;
+      const txt = (el.textContent || "").replace(/\s+/g, " ").trim();
+      if (txt.length > 8 && txt.length < 200) {
+        pageMeta.textSamples.push({
+          tag: el.tagName.toLowerCase(),
+          text: txt,
+          fontWeight: getComputedStyle(el).fontWeight,
+          fontSize: getComputedStyle(el).fontSize,
+        });
+      }
+    }
+
     const colorList = [...colors.entries()]
       .sort((a, b) => {
         const ka = hslSortKey(a[0]);
@@ -574,8 +691,11 @@
       components: repeated,
       buttons: controls.buttons,
       links: controls.links,
+      contrastPairs: uniquePairs,
+      breakpoints,
+      pageMeta,
     };
   }
 
-  window.__htfyDesignSystemCapture = { version: 3, extractDesignSystem };
+  window.__htfyDesignSystemCapture = { version: 4, extractDesignSystem };
 })();
