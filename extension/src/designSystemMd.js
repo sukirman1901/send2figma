@@ -225,6 +225,8 @@ function componentTokenName(comp, part) {
   return `--${base}-${part}`;
 }
 
+import { pageProfile, wcagSummary, inferBrand, inferTone, qualityGates, buildSkillMd } from "./designSystem.js";
+
 /**
  * Compact Style Reference (Superr-like) — DEFINE-phase artifact for agents.
  * Prefer this over the long hierarchy dump when cloning a site.
@@ -293,6 +295,21 @@ export function formatCompactStyleReference(exp) {
   push("");
   push(`**Theme:** ${theme}`);
   push("");
+
+  // ——— Brand ———
+  const brand = inferBrand(exp?.pageMeta);
+  const profile = pageProfile(exp?.pageMeta);
+  if (brand.name || brand.mission) {
+    push(`## Brand`);
+    push("");
+    if (brand.name) push(`- **Name:** ${brand.name}`);
+    if (brand.mission) push(`- **Mission:** ${brand.mission}`);
+    if (brand.audience) push(`- **Audience:** ${brand.audience}`);
+    push(`- **Surface:** ${profile.label} (${Math.round(profile.confidence * 100)}% confidence)`);
+    push(`- **URL:** ${brand.url || exp?.source || "N/A"}`);
+    push("");
+  }
+
   push(
     `${title} is rebuilt from a live capture. Prefer named tokens below for all UI. Section layout measures (padding/gap) may override spacing when cloning a specific block. Decorative colors that appear rarely should stay decorative — do not promote them to buttons or links unless listed under Components.`
   );
@@ -330,6 +347,25 @@ export function formatCompactStyleReference(exp) {
     pushColor(titleCase(found), hex, c.foundation || `--color-${slug(found)}`, "Foundation swatch from page");
   }
   push("");
+
+  // ——— Accessibility ———
+  const contrastData = wcagSummary(exp?.contrastPairs);
+  if (contrastData.total > 0) {
+    push(`## Accessibility`);
+    push("");
+    push(`**WCAG 2.2 AA:** ${contrastData.pass}/${contrastData.total} contrast pairs pass`);
+    push("");
+    if (contrastData.fail > 0) {
+      push(`**Failing pairs (${contrastData.fail}):**`);
+      push("");
+      for (const rec of contrastData.recommendations.slice(0, 5)) {
+        push(`- ${rec}`);
+      }
+      push("");
+    }
+    push(`---`);
+    push("");
+  }
 
   // ——— Typography ———
   push(`## Tokens — Typography`);
@@ -455,6 +491,14 @@ export function formatCompactStyleReference(exp) {
     push("");
   }
 
+  // ——— Writing Tone ———
+  const tone = inferTone(exp?.pageMeta?.textSamples);
+  push(`## Writing Tone`);
+  push("");
+  push(`**Detected tone:** ${tone.tone} (${Math.round(tone.confidence * 100)}% confidence)`);
+  push(`**Description:** ${tone.description}`);
+  push("");
+
   // ——— Do / Don't ———
   push(`## Do's and Don'ts`);
   push("");
@@ -472,6 +516,19 @@ export function formatCompactStyleReference(exp) {
   push(`- Don't replace measured spacing with default Tailwind steps`);
   if (!shadows.length) push(`- Don't add heavy shadows or glass that weren't captured`);
   push(`- Don't skip DEFINE — write/update this Style Reference before BUILD`);
+  push("");
+
+  // ——— Quality Gates ———
+  const gates = qualityGates(exp);
+  push(`## Quality Gates`);
+  push("");
+  push(`**Score:** ${gates.score}/100`);
+  push("");
+  push(`| Gate | Status | Details |`);
+  push(`|------|--------|---------|`);
+  for (const g of gates.gates) {
+    push(`| ${g.name} | ${g.pass ? "✅" : "❌"} | ${g.message} |`);
+  }
   push("");
 
   // ——— Surfaces ———
@@ -556,6 +613,17 @@ export function formatCompactStyleReference(exp) {
   push("}");
   push("```");
   push("");
+
+  // ——— Diagnostics ———
+  push(`## Diagnostics`);
+  push("");
+  push(`- Elements scanned: ~${exp?.treeSummary?.nodeCount || "N/A"}`);
+  push(`- Colors detected: ${colors.length}`);
+  push(`- Type sizes: ${fontSizes.length}`);
+  push(`- Components: ${(exp?.components || []).length}`);
+  push(`- Generated: ${exp?.exportedAt || new Date().toISOString()}`);
+  push("");
+
   push(`---`);
   push(`_Send2Figma compact Style Reference · DEFINE before PLAN/BUILD_`);
   push("");
@@ -570,6 +638,15 @@ export function formatCompactStyleReference(exp) {
 export function formatDesignSystemMarkdown(exp) {
   // Compact Style Reference is the default DEFINE artifact (Superr-like).
   return formatCompactStyleReference(exp);
+}
+
+/**
+ * Generate SKILL.md for AI agent consumption.
+ * @param {object} exp
+ * @returns {string}
+ */
+export function generateSkillMd(exp) {
+  return buildSkillMd(exp);
 }
 
 /** Legacy long-form hierarchy dump (optional). */

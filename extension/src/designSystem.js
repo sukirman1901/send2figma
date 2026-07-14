@@ -2,7 +2,7 @@
  * Service-worker / Node-safe design system helpers (no DOM).
  */
 
-import { formatDesignSystemMarkdown, formatCompactStyleReference } from "./designSystemMd.js";
+import { formatDesignSystemMarkdown, formatCompactStyleReference, generateSkillMd } from "./designSystemMd.js";
 
 /**
  * Escape special YAML characters in a string value.
@@ -483,7 +483,7 @@ export function toDesignSystemJsonPayload(exp) {
   };
 }
 
-export { formatDesignSystemMarkdown, formatCompactStyleReference };
+export { formatDesignSystemMarkdown, formatCompactStyleReference, generateSkillMd };
 export { pageProfile, wcagSummary, inferBrand, inferTone, qualityGates, buildSkillMd };
 
 export function summarizeDesignSystem(tokens) {
