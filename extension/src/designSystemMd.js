@@ -586,7 +586,13 @@ export function formatCompactStyleReference(exp) {
     );
   }
   fontSizes.forEach((s, i) => {
-    const role = typeRole(parsePx(s.value), i, fontSizes.length);
+    let role = typeRole(parsePx(s.value), i, fontSizes.length);
+    const usedRoles = fontSizes.slice(0, i).map((prev, j) => typeRole(parsePx(prev.value), j, fontSizes.length));
+    let counter = 2;
+    while (usedRoles.includes(role)) {
+      role = `${role.replace(/-\d+$/, "")}-${counter}`;
+      counter++;
+    }
     push(`  --text-${role}: ${s.value};`);
   });
   for (const w of fontWeights.slice(0, 4)) {

@@ -22,27 +22,31 @@ export function pageProfile(meta) {
 
   const scores = { docs: 0, app: 0, marketing: 0, ecommerce: 0, blog: 0, content: 0 };
 
+  // URL path patterns (strong signals)
   if (/\/docs?\//.test(url) || /\/api\//.test(url) || /\/reference\//.test(url) || /\/guide\//.test(url)) scores.docs += 3;
   if (/\/blog\//.test(url) || /\/post\//.test(url) || /\/article\//.test(url)) scores.blog += 3;
   if (/\/app\//.test(url) || /\/dashboard\//.test(url) || /\/settings\//.test(url) || /\/admin\//.test(url)) scores.app += 3;
   if (/\/shop\//.test(url) || /\/product\//.test(url) || /\/cart\//.test(url) || /\/checkout\//.test(url)) scores.ecommerce += 3;
   if (/\/pricing/.test(url) || /\/features/.test(url) || /\/about/.test(url) || /\/contact/.test(url) || /\/careers/.test(url)) scores.marketing += 3;
 
-  if (/\b(documentation|docs|api|reference|guide|tutorial|manual)\b/.test(combined)) scores.docs += 2;
-  if (/\b(buy|price|shop|product|deal|discount|offer)\b/.test(combined)) scores.ecommerce += 2;
-  if (/\b(sign up|start|try|free|trial|demo|plan)\b/.test(combined)) scores.marketing += 2;
-  if (/\b(dashboard|settings|account|profile|login|admin)\b/.test(combined)) scores.app += 2;
+  // Title/description keyword matching
+  if (/\b(documentation|docs|api|reference|guide|tutorial|manual|learn)\b/.test(combined)) scores.docs += 2;
+  if (/\b(buy|price|shop|product|deal|discount|offer|purchase|store)\b/.test(combined)) scores.ecommerce += 2;
+  if (/\b(sign up|start|try|free|trial|demo|plan|launch|build|create|ship|no-code|template|showcase|drop in|export)\b/.test(combined)) scores.marketing += 2;
+  if (/\b(dashboard|settings|account|profile|login|admin|console)\b/.test(combined)) scores.app += 2;
 
-  if (meta.articleCount >= 3) scores.blog += 2;
-  if (meta.formCount >= 2) scores.app += 1;
-  if (meta.navCount >= 2) scores.docs += 1;
-  if (meta.headingCount >= 5) scores.docs += 1;
-  if (meta.headingCount >= 8) scores.blog += 1;
+  // DOM heuristics (weaker signals, only boost if already scoring)
+  if (meta.articleCount >= 5) scores.blog += 1;
+  if (meta.formCount >= 3) scores.app += 1;
+
+  // Root URL with short path = likely marketing/landing
+  const pathParts = url.replace(/https?:\/\//, "").replace(/[^/]/g, "").length;
+  if (pathParts <= 1 && scores.marketing === 0) scores.marketing += 1;
 
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const [bestType, bestScore] = sorted[0];
   const total = sorted.reduce((s, [, v]) => s + v, 0) || 1;
-  const confidence = Math.min(0.95, bestScore / total);
+  const confidence = bestScore === 0 ? 0.3 : Math.min(0.95, bestScore / total);
 
   const labels = {
     docs: "Documentation / API reference",
@@ -87,10 +91,13 @@ export function inferBrand(meta) {
   const host = meta.host || "";
   const name = meta.title?.split(/[—|–-]/)[0]?.trim() || host.split(".")[0] || "";
   const mission = meta.description || `Products and services from ${name}`;
+  const combined = `${meta.title || ""} ${meta.description || ""}`.toLowerCase();
   let audience = "general users";
-  if (/\b(developer|api|code|engineer)\b/i.test(`${meta.title} ${meta.description}`)) audience = "developers";
-  else if (/\b(business|enterprise|team|company)\b/i.test(`${meta.title} ${meta.description}`)) audience = "businesses";
-  else if (/\b(shop|buy|product|deal)\b/i.test(`${meta.title} ${meta.description}`)) audience = "consumers";
+  if (/\b(developer|api|code|engineer|devops|frontend|backend|fullstack|devtool)\b/i.test(combined)) audience = "developers";
+  else if (/\b(business|enterprise|team|company|saas|b2b|organization)\b/i.test(combined)) audience = "businesses";
+  else if (/\b(shop|buy|product|deal|discount|offer|purchase|store|cart)\b/i.test(combined)) audience = "consumers";
+  else if (/\b(design|creative|template|mockup|showcase|portfolio|ui|ux|figma|sketch)\b/i.test(combined)) audience = "designers and creatives";
+  else if (/\b(learn|course|tutorial|education|student|teach|training|lesson)\b/i.test(combined)) audience = "learners and students";
   return { name, mission, audience, url: meta.url || "" };
 }
 
@@ -106,10 +113,13 @@ export function inferTone(samples) {
   const avgWordLen = allText.replace(/[^a-z]/g, "").length / Math.max(wordCount, 1);
   const hasExcl = /!/.test(allText);
   const hasQuestion = /\?/.test(allText);
-  const formalMarkers = /\b(please|thank you|welcome|information|available|request|submit)\b/i;
-  const casualMarkers = /\b(hey|wow|cool|awesome|super|gonna|wanna|check out)\b/i;
-  const technicalMarkers = /\b(api|endpoint|function|variable|config|deploy|server|database|query)\b/i;
-  const marketingMarkers = /\b(best|free|top|amazing|transform|boost|grow|launch|new|exclusive)\b/i;
+  const sentenceCount = allText.split(/[.!?]+/).filter((s) => s.trim().length > 0).length;
+  const avgSentenceLen = wordCount / Math.max(sentenceCount, 1);
+
+  const formalMarkers = /\b(please|thank you|welcome|information|available|request|submit|require|ensure|must|should|shall|provides|offers|enables|facilitates|utilize|implement|establish)\b/i;
+  const casualMarkers = /\b(hey|wow|cool|awesome|super|gonna|wanna|check out|yep|nope|stuff|things|pretty much|kind of|sort of|right\?|yeah)\b/i;
+  const technicalMarkers = /\b(api|endpoint|function|variable|config|deploy|server|database|query|component|render|state|props|hook|middleware|schema|token|build|compile|bundle)\b/i;
+  const marketingMarkers = /\b(best|free|top|amazing|transform|boost|grow|launch|new|exclusive|limited|offer|deal|discount|save|get started|try|start|sign up|join|discover|explore|create|ship|build|no-code|template|showcase|drop in|export|instant|fast|powerful)\b/i;
 
   const scores = { formal: 0, casual: 0, technical: 0, marketing: 0, neutral: 0 };
   if (formalMarkers.test(allText)) scores.formal += 2;
@@ -120,10 +130,24 @@ export function inferTone(samples) {
   if (hasQuestion) scores.formal += 0.5;
   if (avgWordLen > 6) scores.formal += 1;
   if (avgWordLen < 4) scores.casual += 1;
+  if (avgSentenceLen > 20) scores.formal += 0.5;
+  if (avgSentenceLen < 8) scores.casual += 0.5;
 
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const [best, bestScore] = sorted[0];
   const total = sorted.reduce((s, [, v]) => s + v, 0) || 1;
+
+  let confidence;
+  if (bestScore === 0) {
+    confidence = 0.3;
+  } else if (bestScore >= 4) {
+    confidence = 0.85;
+  } else if (bestScore >= 2) {
+    confidence = 0.65;
+  } else {
+    confidence = Math.min(0.7, bestScore / total);
+  }
+
   const descriptions = {
     formal: "Professional, structured communication",
     casual: "Friendly, approachable language",
@@ -131,7 +155,7 @@ export function inferTone(samples) {
     marketing: "Promotional, action-oriented copy",
     neutral: "Balanced, general-purpose tone",
   };
-  return { tone: best, confidence: Math.min(0.9, bestScore / total), description: descriptions[best] };
+  return { tone: best, confidence, description: descriptions[best] };
 }
 
 /**
