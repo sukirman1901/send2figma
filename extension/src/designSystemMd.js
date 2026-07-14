@@ -225,7 +225,7 @@ function componentTokenName(comp, part) {
   return `--${base}-${part}`;
 }
 
-import { pageProfile, wcagSummary, inferBrand, inferTone, qualityGates, buildSkillMd } from "./designSystem.js";
+import { pageProfile, wcagSummary, inferBrand, inferTone, qualityGates, buildSkillMd } from "./designAnalysis.js";
 
 /**
  * Compact Style Reference (Superr-like) — DEFINE-phase artifact for agents.
@@ -638,15 +638,6 @@ export function formatCompactStyleReference(exp) {
 export function formatDesignSystemMarkdown(exp) {
   // Compact Style Reference is the default DEFINE artifact (Superr-like).
   return formatCompactStyleReference(exp);
-}
-
-/**
- * Generate SKILL.md for AI agent consumption.
- * @param {object} exp
- * @returns {string}
- */
-export function generateSkillMd(exp) {
-  return buildSkillMd(exp);
 }
 
 /** Legacy long-form hierarchy dump (optional). */
