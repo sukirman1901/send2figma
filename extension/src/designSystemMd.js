@@ -37,6 +37,14 @@ function parsePx(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+function formatRadius(v) {
+  if (v == null || v === "—") return "—";
+  const n = typeof v === "number" ? v : parseFloat(String(v).replace(/px$/i, ""));
+  if (!Number.isFinite(n)) return String(v);
+  if (n > 999) return "pill";
+  return `${n}px`;
+}
+
 function sortByPxAsc(items) {
   return [...(items || [])].sort((a, b) => (parsePx(a.value) || 0) - (parsePx(b.value) || 0));
 }
@@ -434,11 +442,11 @@ export function formatCompactStyleReference(exp) {
   push(`| Element | Value |`);
   push(`|---------|-------|`);
   const btnR = buttons[0]?.borderRadius || buttons[0]?.radius;
-  if (btnR) push(`| buttons | ${btnR} |`);
+  if (btnR) push(`| buttons | ${formatRadius(btnR)} |`);
   for (const r of radii.slice(0, 6)) {
     const px = parsePx(r.value) || 0;
     const label = px >= 999 || px >= 40 ? "pill / large" : px >= 16 ? "cards / controls" : "inputs / chips";
-    push(`| ${label} | ${r.value} |`);
+    push(`| ${label} | ${formatRadius(r.value)} |`);
   }
   if (!radii.length && !btnR) push(`| controls | 8px |`);
   push("");
@@ -466,8 +474,7 @@ export function formatCompactStyleReference(exp) {
       push("");
       const bg = b.backgroundColorHex || b.background || "—";
       const fg = b.colorHex || b.foreground || b.color || "—";
-      const radiusRaw = b.borderRadius || b.radius || "—";
-      const radiusVal = typeof radiusRaw === "number" ? (radiusRaw > 999 ? "pill" : `${radiusRaw}px`) : radiusRaw;
+      const radiusVal = formatRadius(b.borderRadius || b.radius);
       push(
         `Fill \`${bg}\`, text \`${fg}\`, height ${b.height || "—"}, radius ${radiusVal}, type ${b.fontSize || "—"} / weight ${b.fontWeight || "—"}, padding \`${b.padding || "—"}\`${b.text ? `. Sample label: \u201c${b.text}\u201d` : ""}.`
       );
@@ -516,7 +523,7 @@ export function formatCompactStyleReference(exp) {
   if (canvas) push(`- Keep the canvas at \`${canvas}\` unless a section alias overrides`);
   if (ink) push(`- Use \`${ink}\` for body/UI text`);
   if (accent) push(`- Use \`${accent}\` only for primary actions / brand emphasis listed above`);
-  if (btnR) push(`- Match button radius \`${btnR}\` and measured heights — do not switch to full-pill unless captured`);
+  if (btnR) push(`- Match button radius \`${formatRadius(btnR)}\` and measured heights — do not switch to full-pill unless captured`);
   push(`- Prefer tokens in this file over raw capture dumps`);
   push("");
   push(`### Don't`);
@@ -564,7 +571,7 @@ export function formatCompactStyleReference(exp) {
   if (buttons[0]) {
     const b = buttons[0];
     push(
-      `1. Build primary button: fill ${b.backgroundColorHex || b.background}, text ${b.colorHex || b.color}, height ${b.height}, radius ${b.borderRadius || b.radius}, type ${primaryFont} ${b.fontSize}/${b.fontWeight}.`
+      `1. Build primary button: fill ${b.backgroundColorHex || b.background}, text ${b.colorHex || b.color}, height ${b.height}, radius ${formatRadius(b.borderRadius || b.radius)}, type ${primaryFont} ${b.fontSize}/${b.fontWeight}.`
     );
   } else {
     push(`1. Build UI only from tokens in this file; measure missing CTAs from section specs.`);
@@ -623,9 +630,11 @@ export function formatCompactStyleReference(exp) {
     push(`  --spacing-${slug(px ?? s.value)}: ${s.value};`);
   }
   for (const r of radii.slice(0, 6)) {
-    push(`  --radius-${slug(r.value)}: ${r.value};`);
+    const px = parsePx(r.value) || 0;
+    const tokenName = px > 999 ? "radius-pill" : `radius-${slug(r.value)}`;
+    push(`  --${tokenName}: ${formatRadius(r.value)};`);
   }
-  if (btnR) push(`  --radius-buttons: ${btnR};`);
+  if (btnR) push(`  --radius-buttons: ${formatRadius(btnR)};`);
   push("}");
   push("```");
   push("");
