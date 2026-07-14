@@ -534,6 +534,44 @@ export function formatCompactStyleReference(exp) {
   push(`- Don't skip DEFINE — write/update this Style Reference before BUILD`);
   push("");
 
+  // ——— Guideline Authoring Workflow ———
+  push(`## Guideline Authoring Workflow`);
+  push("");
+  push(`1. Restate the design intent in one sentence.`);
+  push(`2. Define the foundations and semantic tokens in play.`);
+  push(`3. Define component anatomy, variants, interactions, and state behaviour.`);
+  push(`4. Add accessibility acceptance criteria with pass/fail checks.`);
+  push(`5. Note anti-patterns, migration notes, and edge cases.`);
+  push(`6. Close with a QA checklist.`);
+  push("");
+
+  // ——— Required Output Structure ———
+  push(`## Required Output Structure`);
+  push("");
+  push(`- Context and goals.`);
+  push(`- Design tokens and foundations.`);
+  push(`- Component rules: anatomy, variants, states, responsive behaviour.`);
+  push(`- Accessibility requirements with testable acceptance criteria.`);
+  push(`- Content and tone standards with examples.`);
+  push(`- Anti-patterns and prohibited implementations.`);
+  push(`- QA checklist.`);
+  push("");
+
+  // ——— Component Rule Expectations ———
+  push(`## Component Rule Expectations`);
+  push("");
+  push(`- Cover keyboard, pointer, and touch behaviour.`);
+  push(`- State the spacing and typography tokens each component uses.`);
+  push(`- Handle long content, overflow, and empty states.`);
+  const compCounts = [];
+  if (buttons.length) compCounts.push(`buttons (${buttons.length})`);
+  if (links.length) compCounts.push(`links (${links.length})`);
+  if (exp?.components?.length) compCounts.push(`cards (${exp.components.length})`);
+  if (exp?.pageMeta?.headingCount) compCounts.push(`headings (${exp.pageMeta.headingCount})`);
+  if (exp?.pageMeta?.navCount) compCounts.push(`navigation (${exp.pageMeta.navCount})`);
+  if (compCounts.length) push(`- Detected component density on this page: ${compCounts.join(", ")}.`);
+  push("");
+
   // ——— Quality Gates ———
   const gates = qualityGates(exp);
   push(`## Quality Gates`);
