@@ -336,13 +336,15 @@
 
   function findEffectiveBg(el) {
     let node = el;
-    while (node && node.nodeType === 1) {
+    let depth = 0;
+    while (node && node.nodeType === 1 && depth < 5) {
       try {
         const s = getComputedStyle(node);
         const bg = resolveToRgb(s.backgroundColor);
-        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "rgb(0, 0, 0)") return bg;
+        if (bg && bg !== "rgba(0, 0, 0, 0)") return bg;
       } catch (_) {}
       node = node.parentElement;
+      depth++;
     }
     return resolveToRgb("rgb(255, 255, 255)");
   }
@@ -547,10 +549,12 @@
     const breakpoints = [];
     try {
       for (const sheet of document.styleSheets) {
+        if (breakpoints.length >= 8) break;
         let rules;
         try { rules = sheet.cssRules; } catch { continue; }
         if (!rules) continue;
         for (const rule of rules) {
+          if (breakpoints.length >= 8) break;
           if (rule.type === CSSRule.MEDIA_RULE) {
             const mql = rule.conditionText || "";
             const pxMatch = mql.match(/(?:min|max)-width:\s*(\d+(?:\.\d+)?)px/);
