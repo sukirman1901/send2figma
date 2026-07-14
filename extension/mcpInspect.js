@@ -3,7 +3,7 @@
  * Builds agent-ready layoutSpec / typeSpec / colorSpec so recreates don't guess.
  */
 (function () {
-  if (window.__htfyMcpInspect?.version >= 2) return;
+  if (window.__htfyMcpInspect?.version >= 3) return;
 
   const COMPUTED_ALLOW = new Set([
     "display",
@@ -163,8 +163,12 @@
   }
 
   function layoutSlice(style) {
-    return {
-      display: style.display,
+    const display = style.display;
+    const isFlex = display.includes("flex");
+    const isGrid = display.includes("grid");
+    
+    const slice = {
+      display,
       position: style.position,
       width: style.width,
       height: style.height,
@@ -184,6 +188,29 @@
       alignItems: style.alignItems,
       flexDirection: style.flexDirection,
     };
+    
+    // Add flex-specific details
+    if (isFlex) {
+      slice.flexWrap = style.flexWrap;
+      slice.flexGrow = style.flexGrow;
+      slice.flexShrink = style.flexShrink;
+      slice.flexBasis = style.flexBasis;
+      slice.alignSelf = style.alignSelf;
+      slice.alignContent = style.alignContent;
+    }
+    
+    // Add grid-specific details
+    if (isGrid) {
+      slice.gridTemplateColumns = style.gridTemplateColumns;
+      slice.gridTemplateRows = style.gridTemplateRows;
+      slice.gridColumnGap = style.gridColumnGap;
+      slice.gridRowGap = style.gridRowGap;
+      slice.gridAutoColumns = style.gridAutoColumns;
+      slice.gridAutoRows = style.gridAutoRows;
+      slice.gridAutoFlow = style.gridAutoFlow;
+    }
+    
+    return slice;
   }
 
   function typeSlice(style) {
@@ -218,6 +245,255 @@
     return String(el.className || "");
   }
 
+  // New helper functions for design system detection
+  
+  function detectSpacingScale(root) {
+    const spacingValues = new Map();
+    const elements = root.querySelectorAll("*");
+    
+    for (const el of elements) {
+      try {
+        const style = getComputedStyle(el);
+        const values = [
+          style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft,
+          style.marginTop, style.marginRight, style.marginBottom, style.marginLeft,
+          style.gap, style.rowGap, style.columnGap
+        ].filter(v => v && v !== "0px" && v !== "auto");
+        
+        for (const val of values) {
+          const num = parseFloat(val);
+          if (num > 0 && num < 200) { // Filter out unreasonable values
+            spacingValues.set(val, (spacingValues.get(val) || 0) + 1);
+          }
+        }
+      } catch (_) {}
+    }
+    
+    // Sort by frequency and return top values
+    const sorted = [...spacingValues.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([value, count]) => ({ value, count }));
+    
+    // Detect scale pattern (4px, 8px, 12px, 16px, etc.)
+    const scale = [];
+    const commonUnits = [4, 8, 12, 16, 20, 24, 32, 40, 48, 64];
+    for (const unit of commonUnits) {
+      const found = sorted.find(s => Math.abs(parseFloat(s.value) - unit) < 2);
+      if (found) scale.push({ unit: `${unit}px`, frequency: found.count });
+    }
+    
+    return { values: sorted, scale, pattern: scale.length >= 3 ? "4px-grid" : "custom" };
+  }
+
+  function detectTypeScale(root) {
+    const fontSizes = new Map();
+    const elements = root.querySelectorAll("h1, h2, h3, h4, h5, h6, p, a, span, li, td, th, button, label, div");
+    
+    for (const el of elements) {
+      try {
+        const style = getComputedStyle(el);
+        const size = style.fontSize;
+        const weight = style.fontWeight;
+        const tag = el.tagName.toLowerCase();
+        
+        if (size) {
+          const key = `${size}|${weight}`;
+          fontSizes.set(key, {
+            size,
+            weight,
+            tag,
+            count: (fontSizes.get(key)?.count || 0) + 1,
+            text: (el.textContent || "").trim().slice(0, 30)
+          });
+        }
+      } catch (_) {}
+    }
+    
+    // Sort by font size
+    const sorted = [...fontSizes.values()]
+      .sort((a, b) => parseFloat(b.size) - parseFloat(a.size))
+      .slice(0, 15);
+    
+    // Detect scale pattern
+    const sizes = sorted.map(s => parseFloat(s.size));
+    const uniqueSizes = [...new Set(sizes)].sort((a, b) => b - a);
+    
+    // Check for common scale ratios
+    let scaleType = "custom";
+    if (uniqueSizes.length >= 3) {
+      const ratios = [];
+      for (let i = 0; i < uniqueSizes.length - 1; i++) {
+        ratios.push(uniqueSizes[i] / uniqueSizes[i + 1]);
+      }
+      const avgRatio = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+      if (Math.abs(avgRatio - 1.25) < 0.1) scaleType = "major-third";
+      else if (Math.abs(avgRatio - 1.333) < 0.1) scaleType = "perfect-fourth";
+      else if (Math.abs(avgRatio - 1.5) < 0.1) scaleType = "perfect-fifth";
+      else if (Math.abs(avgRatio - 1.618) < 0.1) scaleType = "golden-ratio";
+    }
+    
+    return { sizes: sorted, scaleType, uniqueSizes: uniqueSizes.slice(0, 8) };
+  }
+
+  function detectColorPalette(root) {
+    const colors = new Map();
+    const elements = root.querySelectorAll("*");
+    
+    for (const el of elements) {
+      try {
+        const style = getComputedStyle(el);
+        const bg = style.backgroundColor;
+        const fg = style.color;
+        
+        if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+          const rgb = parseRgb(bg);
+          if (rgb && rgb.a > 0.1) {
+            const hex = toHex(rgb);
+            colors.set(hex, {
+              hex,
+              rgb,
+              type: "background",
+              count: (colors.get(hex)?.count || 0) + 1,
+              luminance: luminance(rgb)
+            });
+          }
+        }
+        
+        if (fg) {
+          const rgb = parseRgb(fg);
+          if (rgb && rgb.a > 0.1) {
+            const hex = toHex(rgb);
+            if (!colors.has(hex)) {
+              colors.set(hex, {
+                hex,
+                rgb,
+                type: "text",
+                count: 0,
+                luminance: luminance(rgb)
+              });
+            }
+            colors.get(hex).count++;
+          }
+        }
+      } catch (_) {}
+    }
+    
+    // Sort by frequency
+    const sorted = [...colors.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+    
+    // Categorize colors
+    const palette = {
+      primary: null,
+      secondary: null,
+      accent: null,
+      neutral: [],
+      text: [],
+      background: []
+    };
+    
+    // Find primary (most frequent non-neutral color)
+    for (const color of sorted) {
+      const { luminance: lum, hex } = color;
+      const isNeutral = Math.abs(color.rgb.r - color.rgb.g) < 20 && 
+                       Math.abs(color.rgb.g - color.rgb.b) < 20;
+      
+      if (isNeutral) {
+        palette.neutral.push(color);
+      } else if (!palette.primary && color.type === "background") {
+        palette.primary = color;
+      } else if (!palette.secondary && color.type === "background") {
+        palette.secondary = color;
+      } else if (!palette.accent) {
+        palette.accent = color;
+      }
+      
+      if (lum < 0.3 || lum > 0.7) {
+        palette.text.push(color);
+      }
+    }
+    
+    return { colors: sorted, palette };
+  }
+
+  function detectSemanticRoles(root) {
+    const roles = [];
+    const elements = root.querySelectorAll("*");
+    
+    for (const el of elements) {
+      try {
+        const tag = el.tagName.toLowerCase();
+        const role = el.getAttribute("role");
+        const ariaLabel = el.getAttribute("aria-label");
+        const className = el.className;
+        const text = (el.textContent || "").trim().slice(0, 50);
+        
+        // Semantic role detection
+        let semanticRole = null;
+        
+        // Navigation patterns
+        if (tag === "nav" || role === "navigation" || /nav|menu|sidebar/i.test(className)) {
+          semanticRole = "navigation";
+        }
+        // Header/hero patterns
+        else if (tag === "header" || role === "banner" || /hero|header|banner/i.test(className)) {
+          semanticRole = "header";
+        }
+        // Footer patterns
+        else if (tag === "footer" || role === "contentinfo" || /footer/i.test(className)) {
+          semanticRole = "footer";
+        }
+        // Main content
+        else if (tag === "main" || role === "main" || /main|content/i.test(className)) {
+          semanticRole = "main";
+        }
+        // Article/content
+        else if (tag === "article" || role === "article" || /article|post|blog/i.test(className)) {
+          semanticRole = "article";
+        }
+        // Card patterns
+        else if (/card|tile|panel/i.test(className)) {
+          semanticRole = "card";
+        }
+        // Button patterns
+        else if (tag === "button" || role === "button" || /btn|button|cta/i.test(className)) {
+          semanticRole = "button";
+        }
+        // Input patterns
+        else if (tag === "input" || tag === "textarea" || tag === "select" || /input|field|form/i.test(className)) {
+          semanticRole = "input";
+        }
+        // Image patterns
+        else if (tag === "img" || /img|image|photo|avatar/i.test(className)) {
+          semanticRole = "image";
+        }
+        // List patterns
+        else if (tag === "ul" || tag === "ol" || role === "list" || /list/i.test(className)) {
+          semanticRole = "list";
+        }
+        // Table patterns
+        else if (tag === "table" || role === "table" || /table|grid/i.test(className)) {
+          semanticRole = "table";
+        }
+        
+        if (semanticRole) {
+          roles.push({
+            element: el,
+            role: semanticRole,
+            tag,
+            className,
+            text: text || null,
+            ariaLabel
+          });
+        }
+      } catch (_) {}
+    }
+    
+    return roles;
+  }
+
   function pickPriorityElements(root, maxChildren) {
     const picked = [];
     const seen = new Set();
@@ -231,6 +507,13 @@
     }
 
     add(root, "root", 100);
+
+    // Add semantic roles first (highest priority)
+    const semanticRoles = detectSemanticRoles(root);
+    for (const { element, role, tag, className, text, ariaLabel } of semanticRoles) {
+      const score = 95; // High priority for semantic roles
+      add(element, `semantic:${role}`, score);
+    }
 
     // Direct structural children (nav rows, etc.)
     [...root.children].forEach((el, i) => {
@@ -412,18 +695,31 @@
       aliases.rootHeight = layoutSpec.root.height;
     }
 
+    // Detect design system patterns
+    const spacingScale = detectSpacingScale(root);
+    const typeScale = detectTypeScale(root);
+    const colorPalette = detectColorPalette(root);
+
     return {
-      version: 2,
+      version: 3, // Bump version for new features
       layoutSpec,
       typeSpec,
       colorSpec,
       aliases,
       roles: roles.slice(0, 60),
+      designSystem: {
+        spacingScale,
+        typeScale,
+        colorPalette,
+      },
       rules: [
         "MUST use layoutSpec / typeSpec / colorSpec / aliases for spacing, type, and color.",
         "Do NOT invent padding, gap, justify-content, font-size, or brand colors.",
         "If a value is missing from specs, say so and sample from the screenshot — do not guess.",
         "Screenshot is the pixel source of truth for visual QA.",
+        "Use spacingScale for consistent spacing (4px/8px/16px patterns).",
+        "Use typeScale for typography hierarchy (headings, body, captions).",
+        "Use colorPalette for brand colors (primary, secondary, accent, neutral).",
       ],
     };
   }
@@ -523,9 +819,11 @@
         boxModel: null,
       }));
 
-    const fidelityNotes = ["matched_rules_pending_cdp", "agent_specs_v2"];
+    const fidelityNotes = ["matched_rules_pending_cdp", "agent_specs_v3"];
     if (!specs.aliases.ctaPrimaryBg) fidelityNotes.push("cta_primary_color_missing");
     if (!specs.aliases.ctaSecondaryBg) fidelityNotes.push("cta_secondary_color_missing");
+    if (specs.designSystem?.spacingScale?.pattern === "custom") fidelityNotes.push("custom_spacing_scale");
+    if (specs.designSystem?.typeScale?.scaleType === "custom") fidelityNotes.push("custom_type_scale");
 
     return {
       url: location.href,
@@ -539,7 +837,7 @@
   }
 
   window.__htfyMcpInspect = {
-    version: 2,
+    version: 3,
     inspectDom,
     collectInteractionRules: (selector) => {
       const root = document.querySelector(selector);
