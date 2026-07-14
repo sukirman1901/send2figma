@@ -1,13 +1,4 @@
 import {
-  getAuthState,
-  signInWithGoogle,
-  signOut,
-  recordExportUsage,
-  createCheckoutSession,
-  createPortalSession,
-  getPaymentHistory,
-} from "./src/auth.js";
-import {
   postProcessCaptureHtml,
   decodeFigh2dHtml,
   encodeFigh2dHtml,
@@ -22,6 +13,7 @@ import {
   mcpConnectionState,
   getMcpSettings,
 } from "./src/mcpBridge.js";
+import "./src/mcpRemote.js";
 import {
   cdpInspectNode,
   cdpForceHoverAndCapture,
@@ -386,14 +378,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           ? `Copied ${captureLabel} — paste into Figma (Cmd/Ctrl+V).`
           : "Copied! Paste into Figma Desktop (Cmd/Ctrl+V).";
         await showToast(tab.id, toastMsg, false);
-        let user = null;
-        try {
-          const { isLoggedIn } = await getAuthState();
-          if (isLoggedIn) user = await recordExportUsage();
-        } catch (_) {}
         sendResponse({
           ok: true,
-          user,
           fidelity: data?.fidelity || result.fidelity || null,
           preview,
         });
@@ -427,12 +413,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         if (tab?.id) {
           await showToast(tab.id, "Copied! Paste into Figma Desktop (Cmd/Ctrl+V).", false);
         }
-        let user = null;
-        try {
-          const { isLoggedIn } = await getAuthState();
-          if (isLoggedIn) user = await recordExportUsage();
-        } catch (_) {}
-        sendResponse({ ok: true, user });
+        sendResponse({ ok: true });
       } else {
         sendResponse({ ok: false, error: clip?.error || "Clipboard write failed" });
       }
@@ -448,78 +429,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     await idbDel(PREVIEW);
     sendResponse({ ok: true });
-  })();
-  return true;
-});
-
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (!msg?.type?.startsWith("htfy_AUTH_")) return;
-  (async () => {
-    try {
-      if (msg.type === "htfy_AUTH_STATUS") {
-        sendResponse({ ok: true, ...(await getAuthState()) });
-        return;
-      }
-      if (msg.type === "htfy_AUTH_SIGNIN") {
-        const user = await signInWithGoogle();
-        const { config } = await getAuthState();
-        sendResponse({ ok: true, user, config });
-        return;
-      }
-      if (msg.type === "htfy_AUTH_SIGNOUT") {
-        await signOut();
-        sendResponse({ ok: true });
-        return;
-      }
-      sendResponse({ ok: false, error: "Unknown auth message: " + msg.type });
-    } catch (err) {
-      console.error("[Send2Figma] Auth error:", err);
-      sendResponse({ ok: false, error: err.message || String(err) });
-    }
-  })();
-  return true;
-});
-
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "htfy_BILLING_CHECKOUT") return;
-  (async () => {
-    try {
-      const url = await createCheckoutSession();
-      await chrome.tabs.create({ url });
-      sendResponse({ ok: true });
-    } catch (err) {
-      console.error("[Send2Figma] Checkout error:", err);
-      sendResponse({ ok: false, error: err.message || String(err) });
-    }
-  })();
-  return true;
-});
-
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "htfy_BILLING_PORTAL") return;
-  (async () => {
-    try {
-      const url = await createPortalSession();
-      await chrome.tabs.create({ url });
-      sendResponse({ ok: true });
-    } catch (err) {
-      console.error("[Send2Figma] Portal error:", err);
-      sendResponse({ ok: false, error: err.message || String(err) });
-    }
-  })();
-  return true;
-});
-
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "htfy_BILLING_HISTORY") return;
-  (async () => {
-    try {
-      const items = await getPaymentHistory();
-      sendResponse({ ok: true, items });
-    } catch (err) {
-      console.error("[Send2Figma] Billing history error:", err);
-      sendResponse({ ok: false, error: err.message || String(err) });
-    }
   })();
   return true;
 });
@@ -1441,3 +1350,80 @@ chrome.alarms?.onAlarm?.addListener((alarm) => {
 });
 
 getMcpSettings().then(() => connectMcpBridge()).catch(() => {});
+
+// Remote MCP handlers (for Vercel deployment)
+if (window.__htfyMcpRemote) {
+  window.__htfyMcpRemote.setHandlers({
+    async ping() {
+      const manifest = chrome.runtime.getManifest();
+      return {
+        pong: true,
+        extensionVersion: manifest.version,
+        mode: "remote",
+      };
+    },
+
+    async list_tabs() {
+      const tabs = await chrome.tabs.query({});
+      return {
+        tabs: tabs
+          .filter((t) => t.id && t.url && !isBlockedUrl(t.url))
+          .map((t) => ({
+            id: t.id,
+            title: t.title || "",
+            url: t.url,
+            active: !!t.active,
+          })),
+      };
+    },
+
+    async screenshot(params = {}) {
+      const tab = await mcpResolveTab(params.tabId);
+      const mode = params.mode || "visible";
+      await setExtensionChromeVisible(tab.id, false);
+      await new Promise((r) => setTimeout(r, 80));
+      try {
+        if (mode === "fullPage") {
+          const dataUrl = await captureFullPagePng(tab);
+          return {
+            mimeType: "image/png",
+            base64: dataUrl.replace(/^data:image\/png;base64,/, ""),
+          };
+        }
+        if (mode === "node") {
+          if (!params.selector) throw new Error("selector required for node screenshot");
+          return await cdpCaptureNodePng(tab.id, params.selector);
+        }
+        const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+        return {
+          mimeType: "image/png",
+          base64: dataUrl.replace(/^data:image\/png;base64,/, ""),
+        };
+      } finally {
+        await setExtensionChromeVisible(tab.id, true);
+      }
+    },
+
+    extract_tokens: mcpExtractTokens,
+    inspect: mcpInspect,
+    interaction_css: mcpInteractionCss,
+    bundle: mcpBundle,
+  });
+
+  // Initialize remote MCP on install/startup
+  chrome.runtime.onInstalled.addListener(() => {
+    window.__htfyMcpRemote.init().catch(() => {});
+  });
+
+  chrome.runtime.onStartup.addListener(() => {
+    window.__htfyMcpRemote.init().catch(() => {});
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    if (changes.mcpRemoteEnabled || changes.mcpRemoteSecret) {
+      window.__htfyMcpRemote.stopPolling();
+      window.__htfyMcpRemote.init().catch(() => {});
+    }
+  });
+}

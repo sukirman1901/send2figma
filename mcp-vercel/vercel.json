@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/api/mcp/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/extension/poll/route.ts": {
+      "maxDuration": 10
+    },
+    "app/api/extension/result/route.ts": {
+      "maxDuration": 10
+    }
+  }
+}
