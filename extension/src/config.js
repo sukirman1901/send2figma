@@ -1,1 +1,0 @@
-export const POCKETBASE_URL="https://html-to-figma.fly.dev";export const USERS_COLLECTION="users";export const CONFIG_COLLECTION="app_config";export const DEFAULT_FREE_EXPORT_LIMIT=10;export const FREE_EXPORT_LIMIT=10;

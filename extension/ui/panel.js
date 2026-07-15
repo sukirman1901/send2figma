@@ -49,34 +49,8 @@
     </div>
   </div>
   <div class="htfy-body">
-    <div id="authLoading" class="auth-loading hidden"><div class="spinner"></div></div>
-    <div id="authView" class="auth-view hidden">
-      <div class="htfy-brand-mark" style="margin:0 auto"><img src="${icon}" alt=""></div>
-      <h2>Sign in to Send2Figma</h2>
-      <p class="sub">Sync your export count and unlock Pro across devices.</p>
-      <button id="googleSignIn" class="google-btn" type="button">
-        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.5-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3c-7.4 0-13.8 4.1-17.7 11.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 36.3 26.7 37 24 37c-5.3 0-9.7-3.4-11.3-8l-6.6 5.1C9.2 40.8 16 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2C40.9 36 44 30.8 44 24c0-1.4-.1-2.5-.4-3.5z"/></svg>
-        Continue with Google
-      </button>
-      <div id="authError" class="auth-error"></div>
-    </div>
 
     <div id="appView">
-      <div class="app-top">
-        <div class="user-menu-wrap" style="position:relative">
-          <button id="userChip" class="user-chip hidden" type="button">
-            <div id="userAvatar" class="user-avatar">?</div>
-            <span id="userNameLabel" class="user-name">Account</span>
-          </button>
-          <div id="userMenu" class="user-menu">
-            <div id="userEmailLabel" class="menu-email"></div>
-            <button id="managePlanBtn" class="hidden" type="button">Manage subscription</button>
-            <button id="billingHistoryBtn" type="button">Billing history</button>
-            <button id="signOutBtn" type="button">Sign out</button>
-          </div>
-        </div>
-      </div>
-      <div id="billingError" class="auth-error"></div>
 
 
       <div id="toolPreset" class="tool-view active" data-tool="preset">
@@ -245,23 +219,6 @@
 
       <button id="convert" type="button">Send to Figma</button>
       </div>
-
-
-      <div class="usage-card hidden">
-        <div class="usage-top">
-          <div class="usage-label">Exports <span id="proBadge" class="pro-badge hidden">PRO</span></div>
-          <div id="usageCount" class="usage-count">0 / 10 used</div>
-        </div>
-        <div id="usageBar" class="usage-bar"><div id="usageFill" class="usage-fill" style="width:0%"></div></div>
-        <button id="upgradeBtn" class="upgrade-btn hidden" type="button">Upgrade to Pro</button>
-      </div>
-    </div>
-
-    <div id="billingHistoryView" class="hidden">
-      <button id="billingBackBtn" class="back-btn" type="button">← Back</button>
-      <div id="billingHistoryError" class="auth-error"></div>
-      <div id="billingHistoryEmpty" class="billing-empty hidden">No payments yet.</div>
-      <div id="billingHistoryList" class="billing-table"></div>
     </div>
 
   </div>
@@ -297,19 +254,12 @@
     const $ = (sel) => shadowRoot.querySelector(sel);
     const $$ = (sel) => Array.from(shadowRoot.querySelectorAll(sel));
 
-    let freeLimit = 10;
     let busy = false;
     let lastDesignSystem = null;
     let lastFidelityReport = null;
     let mode = "preset";
-    let billingErrTimer = null;
 
-    const authLoading = $("#authLoading");
-    const authView = $("#authView");
     const appView = $("#appView");
-    const billingHistoryView = $("#billingHistoryView");
-    const authError = $("#authError");
-    const billingError = $("#billingError");
     const convertBtn = $("#convert");
     const previewToggle = $("#previewToggle");
     const multiGate = $("#multiGate");
@@ -323,70 +273,12 @@
     const progressText = $(".progress-text");
     const progressRotatorText = $("#progressRotatorText");
 
-    function showView(el) {
-      [authLoading, authView, appView, billingHistoryView].forEach((v) => v?.classList.add("hidden"));
-      el?.classList.remove("hidden");
-    }
-
-    function showBillingError(msg) {
-      if (!billingError) return;
-      billingError.textContent = msg;
-      billingError.classList.add("show");
-      clearTimeout(billingErrTimer);
-      billingErrTimer = setTimeout(() => billingError.classList.remove("show"), 5000);
-    }
-
-    function applyUser(user) {
-      if (!user) return;
-      const avatar = $("#userAvatar");
-      const nameLabel = $("#userNameLabel");
-      const emailLabel = $("#userEmailLabel");
-      const proBadge = $("#proBadge");
-      const usageCount = $("#usageCount");
-      const usageFill = $("#usageFill");
-      const usageBar = $("#usageBar");
-      const upgradeBtn = $("#upgradeBtn");
-      const managePlanBtn = $("#managePlanBtn");
-      const initial = (user.name || user.email || "?").trim().charAt(0).toUpperCase();
-      if (avatar) {
-        avatar.textContent = initial;
-        if (user.avatarUrl) avatar.innerHTML = `<img src="${user.avatarUrl}" alt="">`;
-      }
-      if (nameLabel) nameLabel.textContent = user.name || user.email || "Account";
-      if (emailLabel) emailLabel.textContent = user.email || "";
-      const used = typeof user.exportsUsed === "number" ? user.exportsUsed : 0;
-      if (user.isPro) {
-        proBadge?.classList.remove("hidden");
-        if (usageCount) usageCount.textContent = "Unlimited";
-        usageBar?.classList.add("hidden");
-        upgradeBtn?.classList.add("hidden");
-        managePlanBtn?.classList.remove("hidden");
-        if (convertBtn) {
-          convertBtn.disabled = false;
-          convertBtn.textContent = "Send to Figma";
-        }
-      } else {
-        proBadge?.classList.add("hidden");
-        if (usageCount) usageCount.textContent = `${used} / ${freeLimit} used`;
-        usageBar?.classList.remove("hidden");
-        if (usageFill) usageFill.style.width = Math.min(100, (used / freeLimit) * 100) + "%";
-        upgradeBtn?.classList.remove("hidden");
-        managePlanBtn?.classList.add("hidden");
-        const blocked = used >= freeLimit;
-        if (convertBtn) {
-          convertBtn.disabled = blocked;
-          convertBtn.textContent = blocked ? "Upgrade to continue exporting" : "Send to Figma";
-        }
-      }
-    }
-
-    function showGuestUI() {
-      $("#userChip")?.classList.add("hidden");
-      $(".usage-card")?.classList.add("hidden");
-      if (convertBtn) {
-        convertBtn.disabled = false;
-        convertBtn.textContent = "Send to Figma";
-      }
+    function showError(msg) {
+      const el = document.createElement("div");
+      el.className = "auth-error show";
+      el.textContent = msg;
+      appView?.prepend(el);
+      setTimeout(() => el.remove(), 5000);
     }
 
     const SETTINGS_KEY = "htfy_panel_settings";
@@ -497,7 +389,7 @@
         (r) => Number.isFinite(r.docX) && Number.isFinite(r.docY) && r.width > 1 && r.height > 1
       );
       if (!list.length) {
-        showBillingError("No raster regions to highlight on this capture.");
+        showError("No raster regions to highlight on this capture.");
         return;
       }
       const root = document.createElement("div");
@@ -637,7 +529,6 @@
         hideProgress(2800);
         return;
       }
-      if (res.user) applyUser(res.user);
       // Preview-before-copy only — do NOT open confirm UI after auto-copy.
       // Opening it reuses a stale IndexedDB preview and can overwrite the clipboard
       // with a previous full-page capture when the user clicks Copy again.
@@ -673,7 +564,7 @@
       if (multi?.checked && mode === "preset") {
         const boxes = $$(".preset-multi-checkbox:checked");
         if (!boxes.length) {
-          showBillingError("Pick at least one size first.");
+          showError("Pick at least one size first.");
           return;
         }
         busy = true;
@@ -697,7 +588,6 @@
             hideProgress(2500);
             return;
           }
-          if (res.user) applyUser(res.user);
           if (i < boxes.length - 1 && multiGate && multiGateLabel) {
             multiGateLabel.textContent = boxes[i].dataset.label;
             multiGate.classList.remove("hidden");
@@ -844,7 +734,6 @@
     function openPanel(tool, opts = {}) {
       panel.classList.add("open");
       panel.classList.remove("minimized");
-      showView(appView);
       setTool(tool || "preset");
       if (tool === "select" && opts.startPicker) {
         setTimeout(() => beginPicker(), 80);
@@ -878,121 +767,7 @@
       panel.classList.toggle("minimized");
     });
 
-    // Auth bootstrap — guest-first
-    showView(appView);
-    showGuestUI();
     loadPanelSettings();
-    send({ type: "htfy_AUTH_STATUS" }).then((res) => {
-      if (!res?.ok) return;
-      if (typeof res.config?.freeExportLimit === "number") freeLimit = res.config.freeExportLimit;
-      if (res.isLoggedIn && res.user) {
-        $("#userChip")?.classList.remove("hidden");
-        $(".usage-card")?.classList.remove("hidden");
-        applyUser(res.user);
-      } else showGuestUI();
-    });
-
-    $("#googleSignIn")?.addEventListener("click", async () => {
-      authError?.classList.remove("show");
-      $("#googleSignIn")?.classList.add("loading");
-      const res = await send({ type: "htfy_AUTH_SIGNIN" });
-      $("#googleSignIn")?.classList.remove("loading");
-      if (!res?.ok) {
-        if (authError) {
-          authError.textContent = res?.error || "Sign-in failed.";
-          authError.classList.add("show");
-        }
-        return;
-      }
-      if (typeof res.config?.freeExportLimit === "number") freeLimit = res.config.freeExportLimit;
-      $("#userChip")?.classList.remove("hidden");
-      $(".usage-card")?.classList.remove("hidden");
-      applyUser(res.user);
-      showView(appView);
-    });
-
-    const userChip = $("#userChip");
-    const userMenu = $("#userMenu");
-    userChip?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      userMenu?.classList.toggle("open");
-    });
-    shadowRoot.addEventListener("click", (e) => {
-      if (!userMenu?.contains(e.target) && e.target !== userChip) userMenu?.classList.remove("open");
-      closeSelect();
-      closeSettingsSelect();
-    });
-
-    $("#signOutBtn")?.addEventListener("click", async () => {
-      await send({ type: "htfy_AUTH_SIGNOUT" });
-      userMenu?.classList.remove("open");
-      showGuestUI();
-      showView(appView);
-    });
-
-    $("#managePlanBtn")?.addEventListener("click", async () => {
-      const btn = $("#managePlanBtn");
-      const prev = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = "Opening…";
-      const res = await send({ type: "htfy_BILLING_PORTAL" });
-      btn.disabled = false;
-      btn.textContent = prev;
-      userMenu?.classList.remove("open");
-      if (!res?.ok) showBillingError(res?.error || "Couldn't open billing portal.");
-    });
-
-    $("#billingHistoryBtn")?.addEventListener("click", async () => {
-      userMenu?.classList.remove("open");
-      showView(billingHistoryView);
-      const err = $("#billingHistoryError");
-      const empty = $("#billingHistoryEmpty");
-      const list = $("#billingHistoryList");
-      err?.classList.remove("show");
-      empty?.classList.add("hidden");
-      if (list) {
-        list.innerHTML =
-          '<div class="billing-row head"><span>Date</span><span class="billing-amount">Amount</span><span class="billing-status">Status</span></div>';
-      }
-      const res = await send({ type: "htfy_BILLING_HISTORY" });
-      if (!res?.ok) {
-        if (err) {
-          err.textContent = res?.error || "Couldn't load billing history.";
-          err.classList.add("show");
-        }
-        return;
-      }
-      if (!res.items?.length) {
-        empty?.classList.remove("hidden");
-        return;
-      }
-      for (const item of res.items) {
-        const paid = item.type === "invoice.paid";
-        const row = document.createElement("div");
-        row.className = "billing-row";
-        const d = new Date(item.created);
-        const date = isNaN(d.getTime())
-          ? "—"
-          : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-        const amount = ((typeof item.amountCents === "number" ? item.amountCents : 0) / 100).toFixed(2);
-        const cur = (item.currency || "usd").toLowerCase() === "usd" ? "$" : (item.currency || "").toUpperCase() + " ";
-        row.innerHTML = `<span>${date}</span><span class="billing-amount">${cur}${amount}</span><span class="billing-status ${paid ? "paid" : "failed"}">${paid ? "Paid" : "Failed"}</span>`;
-        list.appendChild(row);
-      }
-    });
-
-    $("#billingBackBtn")?.addEventListener("click", () => showView(appView));
-
-    $("#upgradeBtn")?.addEventListener("click", async () => {
-      const btn = $("#upgradeBtn");
-      const prev = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = "Opening checkout…";
-      const res = await send({ type: "htfy_BILLING_CHECKOUT" });
-      btn.disabled = false;
-      btn.textContent = prev;
-      if (!res?.ok) showBillingError(res?.error || "Couldn't open checkout.");
-    });
 
     const devicePreset = $("#devicePreset");
     const deviceTrigger = $("#devicePresetTrigger");
@@ -1097,11 +872,19 @@
     previewToggle?.addEventListener("change", (e) => syncPreview(e.target.checked));
     $("#settingsPreviewToggle")?.addEventListener("change", (e) => syncPreview(e.target.checked));
 
-    $("#openMcpOptions")?.addEventListener("click", () => {
+    $("#openMcpOptions")?.addEventListener("click", async () => {
       try {
-        chrome.runtime.openOptionsPage();
-      } catch (_) {
-        showBillingError("Couldn't open options page.");
+        const res = await chrome.runtime.sendMessage({ type: "htfy_OPEN_OPTIONS" });
+        if (res?.ok) return;
+      } catch {}
+      try {
+        await chrome.runtime.openOptionsPage();
+      } catch {
+        try {
+          await chrome.tabs.create({ url: chrome.runtime.getURL("ui/mcp-options.html") });
+        } catch (e) {
+          showError("Couldn't open options page: " + (e?.message || e));
+        }
       }
     });
 

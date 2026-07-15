@@ -1,1 +1,0 @@
-import{AsyncAuthStore as e}from"../vendor/pocketbase.es.mjs";const t="htfy_pb_auth";export function createAuthStore(){const o=chrome.storage.local.get(t).then(e=>e[t]||"");return{store:new e({save:e=>chrome.storage.local.set({[t]:e}),clear:()=>chrome.storage.local.remove(t),initial:o}),ready:o.then(()=>{})}}

@@ -13,7 +13,6 @@ import {
   mcpConnectionState,
   getMcpSettings,
 } from "./src/mcpBridge.js";
-import "./src/mcpRemote.js";
 import {
   cdpInspectNode,
   cdpForceHoverAndCapture,
@@ -1323,6 +1322,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     connectMcpBridge().then(() => sendResponse({ ok: true, state: mcpConnectionState() }));
     return true;
   }
+  if (msg?.type === "htfy_OPEN_OPTIONS") {
+    chrome.runtime.openOptionsPage().then(() => sendResponse({ ok: true })).catch((e) => {
+      chrome.tabs.create({ url: chrome.runtime.getURL("ui/mcp-options.html") })
+        .then(() => sendResponse({ ok: true }))
+        .catch((e2) => sendResponse({ ok: false, error: e2?.message || String(e2) }));
+    });
+    return true;
+  }
 });
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -1350,80 +1357,3 @@ chrome.alarms?.onAlarm?.addListener((alarm) => {
 });
 
 getMcpSettings().then(() => connectMcpBridge()).catch(() => {});
-
-// Remote MCP handlers (for Vercel deployment)
-if (window.__htfyMcpRemote) {
-  window.__htfyMcpRemote.setHandlers({
-    async ping() {
-      const manifest = chrome.runtime.getManifest();
-      return {
-        pong: true,
-        extensionVersion: manifest.version,
-        mode: "remote",
-      };
-    },
-
-    async list_tabs() {
-      const tabs = await chrome.tabs.query({});
-      return {
-        tabs: tabs
-          .filter((t) => t.id && t.url && !isBlockedUrl(t.url))
-          .map((t) => ({
-            id: t.id,
-            title: t.title || "",
-            url: t.url,
-            active: !!t.active,
-          })),
-      };
-    },
-
-    async screenshot(params = {}) {
-      const tab = await mcpResolveTab(params.tabId);
-      const mode = params.mode || "visible";
-      await setExtensionChromeVisible(tab.id, false);
-      await new Promise((r) => setTimeout(r, 80));
-      try {
-        if (mode === "fullPage") {
-          const dataUrl = await captureFullPagePng(tab);
-          return {
-            mimeType: "image/png",
-            base64: dataUrl.replace(/^data:image\/png;base64,/, ""),
-          };
-        }
-        if (mode === "node") {
-          if (!params.selector) throw new Error("selector required for node screenshot");
-          return await cdpCaptureNodePng(tab.id, params.selector);
-        }
-        const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
-        return {
-          mimeType: "image/png",
-          base64: dataUrl.replace(/^data:image\/png;base64,/, ""),
-        };
-      } finally {
-        await setExtensionChromeVisible(tab.id, true);
-      }
-    },
-
-    extract_tokens: mcpExtractTokens,
-    inspect: mcpInspect,
-    interaction_css: mcpInteractionCss,
-    bundle: mcpBundle,
-  });
-
-  // Initialize remote MCP on install/startup
-  chrome.runtime.onInstalled.addListener(() => {
-    window.__htfyMcpRemote.init().catch(() => {});
-  });
-
-  chrome.runtime.onStartup.addListener(() => {
-    window.__htfyMcpRemote.init().catch(() => {});
-  });
-
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local") return;
-    if (changes.mcpRemoteEnabled || changes.mcpRemoteSecret) {
-      window.__htfyMcpRemote.stopPolling();
-      window.__htfyMcpRemote.init().catch(() => {});
-    }
-  });
-}
